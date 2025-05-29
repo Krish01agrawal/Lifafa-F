@@ -166,6 +166,7 @@ export default function ChatScreen() {
   const [selectedChatId, setSelectedChatId] = useState<string | null>(null);
   const [inputText, setInputText] = useState('');
   const [showSidebar, setShowSidebar] = useState(isTablet);
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const flatListRef = useRef<FlatList>(null);
 
   const { data: chats = [], isLoading: chatsLoading } = useChats();
@@ -254,20 +255,38 @@ export default function ChatScreen() {
     }
   };
 
+  const toggleSidebar = () => {
+    if (isTablet) {
+      setSidebarCollapsed(!sidebarCollapsed);
+    } else {
+      setShowSidebar(!showSidebar);
+    }
+  };
+
   const renderSidebar = () => (
     <View className="bg-black border-r border-gray-800" style={{ width: isTablet ? 320 : width * 0.85 }}>
       {/* Sidebar Header */}
       <View className="p-4 border-b border-gray-800">
         <View className="flex-row justify-between items-center mb-3">
           <Text className="text-white text-xl font-bold">Chats</Text>
-          {!isTablet && (
-            <TouchableOpacity
-              onPress={() => setShowSidebar(false)}
-              className="p-1"
-            >
-              <Ionicons name="close" size={24} color="white" />
-            </TouchableOpacity>
-          )}
+          <View className="flex-row items-center">
+            {isTablet && (
+              <TouchableOpacity
+                onPress={() => setSidebarCollapsed(true)}
+                className="p-1 mr-2"
+              >
+                <Ionicons name="chevron-back" size={24} color="white" />
+              </TouchableOpacity>
+            )}
+            {!isTablet && (
+              <TouchableOpacity
+                onPress={() => setShowSidebar(false)}
+                className="p-1"
+              >
+                <Ionicons name="close" size={24} color="white" />
+              </TouchableOpacity>
+            )}
+          </View>
         </View>
         
         <TouchableOpacity
@@ -307,10 +326,18 @@ export default function ChatScreen() {
     <View className="flex-1 bg-black">
       {/* Header */}
       <View className="p-4 border-b border-gray-800 flex-row items-center">
-        {!isTablet && (
+        {(isTablet && sidebarCollapsed) && (
+          <TouchableOpacity
+            onPress={() => setSidebarCollapsed(false)}
+            className="mr-3 p-1"
+          >
+            <Ionicons name="menu" size={24} color="white" />
+          </TouchableOpacity>
+        )}
+        {!isTablet && !showSidebar && (
           <TouchableOpacity
             onPress={() => setShowSidebar(true)}
-            className="mr-3"
+            className="mr-3 p-1"
           >
             <Ionicons name="menu" size={24} color="white" />
           </TouchableOpacity>
@@ -385,11 +412,13 @@ export default function ChatScreen() {
     </View>
   );
 
+  const shouldShowSidebar = isTablet ? !sidebarCollapsed : showSidebar;
+
   return (
     <SafeAreaView className="flex-1 bg-black">
       {isTablet ? (
         <View className="flex-1 flex-row">
-          {renderSidebar()}
+          {shouldShowSidebar && renderSidebar()}
           {renderChatArea()}
         </View>
       ) : showSidebar ? (
