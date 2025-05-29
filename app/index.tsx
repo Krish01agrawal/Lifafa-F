@@ -164,7 +164,7 @@ const MessageItem: React.FC<MessageItemProps> = ({ message }) => {
 };
 
 export default function ChatScreen() {
-  const { chatId } = useLocalSearchParams<{ chatId?: string }>();
+  const { chatId, newChat } = useLocalSearchParams<{ chatId?: string; newChat?: string }>();
   const [inputText, setInputText] = useState('');
   const [showSidebar, setShowSidebar] = useState(isTablet);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
@@ -177,12 +177,12 @@ export default function ChatScreen() {
   const getAIResponseMutation = useGetAIResponse();
   const deleteChatMutation = useDeleteChat();
 
-  // Auto-select first chat on load for larger screens if no chat is selected
+  // Auto-select first chat on load for larger screens if no chat is selected and not in new chat mode
   useEffect(() => {
-    if (chats.length > 0 && !chatId && isTablet) {
+    if (chats.length > 0 && !chatId && !newChat && isTablet) {
       router.replace(`/?chatId=${chats[0].id}`);
     }
-  }, [chats, chatId, isTablet]);
+  }, [chats, chatId, newChat, isTablet]);
 
   // Scroll to bottom when new messages arrive
   useEffect(() => {
@@ -202,11 +202,11 @@ export default function ChatScreen() {
     try {
       let activeChatId = chatId;
 
-      // Create new chat if none selected
-      if (!activeChatId) {
-        const newChat = await createChatMutation.mutateAsync(messageContent);
-        activeChatId = newChat.id;
-        router.push(`/?chatId=${activeChatId}`);
+      // Create new chat if none selected or in new chat mode
+      if (!activeChatId || newChat) {
+        const newChatResult = await createChatMutation.mutateAsync(messageContent);
+        activeChatId = newChatResult.id;
+        router.replace(`/?chatId=${activeChatId}`);
         
         // Get AI response for new chat
         await getAIResponseMutation.mutateAsync({
@@ -250,7 +250,7 @@ export default function ChatScreen() {
   };
 
   const handleNewChat = async () => {
-    router.push('/');
+    router.push('/?newChat=true');
     setShowSidebar(false);
   };
 
@@ -349,7 +349,7 @@ export default function ChatScreen() {
           </TouchableOpacity>
         )}
         <Text className="text-white text-lg font-medium flex-1">
-          {currentChat?.title || 'Select a chat or start a new conversation'}
+          {currentChat?.title || (!chatId ? 'New Chat' : 'Select a chat or start a new conversation')}
         </Text>
       </View>
 
@@ -373,10 +373,10 @@ export default function ChatScreen() {
           <View className="flex-1 justify-center items-center p-8">
             <Ionicons name="chatbubbles-outline" size={64} color="#6B7280" />
             <Text className="text-gray-400 text-lg text-center mt-4">
-              {chats.length > 0 ? 'Select a chat to start messaging' : 'Start a conversation'}
+              {!chatId ? 'Ready to start chatting!' : (chats.length > 0 ? 'Select a chat to start messaging' : 'Start a conversation')}
             </Text>
             <Text className="text-gray-500 text-center mt-2">
-              {chats.length > 0 ? 'Choose a chat from the sidebar' : 'Type a message below to begin chatting'}
+              {!chatId ? 'Type your first message below to begin' : (chats.length > 0 ? 'Choose a chat from the sidebar' : 'Type a message below to begin chatting')}
             </Text>
           </View>
         )}
