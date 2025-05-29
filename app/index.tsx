@@ -63,7 +63,7 @@ const ChatItem: React.FC<ChatItemProps> = ({ chat, isSelected, onSelect, onDelet
 
   return (
     <TouchableOpacity
-      className={`p-4 mx-2 my-1 rounded-lg ${isSelected ? 'bg-gray-800' : 'bg-gray-900'} ${isSelected ? 'border-l-4 border-l-blue-500' : ''}`}
+      className={`p-4 mx-2 my-1 rounded-lg ${isSelected ? 'bg-gray-800' : 'bg-black'} ${isSelected ? 'border-l-4 border-l-blue-500' : ''}`}
       onPress={() => onSelect(chat.id)}
       onLongPress={handleDelete}
     >
@@ -98,13 +98,25 @@ const MessageItem: React.FC<MessageItemProps> = ({ message }) => {
     let lastIndex = 0;
     let match;
 
+    const gradientStyle = isUser ? {
+      background: 'linear-gradient(90deg, rgb(179, 174, 245) 0.41%, rgb(215, 203, 231) 40.68%, rgb(229, 200, 200) 64.12%, rgb(234, 168, 121) 97.82%)',
+      backgroundClip: 'text',
+      WebkitBackgroundClip: 'text',
+      color: 'transparent',
+      WebkitTextFillColor: 'transparent',
+    } : {};
+
     while ((match = codeBlockRegex.exec(content)) !== null) {
       // Add text before code block
       if (match.index > lastIndex) {
         const textBefore = content.slice(lastIndex, match.index);
         if (textBefore.trim()) {
           parts.push(
-            <Text key={`text-${lastIndex}`} className={`text-base ${isUser ? 'text-white' : 'text-gray-100'}`}>
+            <Text 
+              key={`text-${lastIndex}`} 
+              className={`text-base font-medium ${isUser ? '' : 'text-gray-100'}`}
+              style={isUser ? gradientStyle : {}}
+            >
               {textBefore}
             </Text>
           );
@@ -126,7 +138,11 @@ const MessageItem: React.FC<MessageItemProps> = ({ message }) => {
       const remainingText = content.slice(lastIndex);
       if (remainingText.trim()) {
         parts.push(
-          <Text key={`text-${lastIndex}`} className={`text-base ${isUser ? 'text-white' : 'text-gray-100'}`}>
+          <Text 
+            key={`text-${lastIndex}`} 
+            className={`text-base font-medium ${isUser ? '' : 'text-gray-100'}`}
+            style={isUser ? gradientStyle : {}}
+          >
             {remainingText}
           </Text>
         );
@@ -136,7 +152,10 @@ const MessageItem: React.FC<MessageItemProps> = ({ message }) => {
     // If no code blocks found, return simple text
     if (parts.length === 0) {
       return (
-        <Text className={`text-base ${isUser ? 'text-white' : 'text-gray-100'}`}>
+        <Text 
+          className={`text-base font-medium ${isUser ? '' : 'text-gray-100'}`}
+          style={isUser ? gradientStyle : {}}
+        >
           {content}
         </Text>
       );
@@ -148,11 +167,24 @@ const MessageItem: React.FC<MessageItemProps> = ({ message }) => {
   return (
     <View className={`mb-4 ${isUser ? 'items-end' : 'items-start'}`}>
       <View
-        className={`max-w-[80%] p-3 rounded-2xl ${
+        className={`max-w-[80%] p-4 ${
           isUser
-            ? 'bg-blue-600 rounded-br-md'
-            : 'bg-gray-800 rounded-bl-md'
+            ? 'rounded-full bg-black border border-gray-400'
+            : 'rounded-2xl bg-gray-800 border border-gray-600'
         }`}
+        style={isUser ? {
+          shadowColor: '#D1D5DB',
+          shadowOffset: { width: 0, height: 1 },
+          shadowOpacity: 0.3,
+          shadowRadius: 3,
+          elevation: 3,
+        } : {
+          shadowColor: '#374151',
+          shadowOffset: { width: 0, height: 1 },
+          shadowOpacity: 0.2,
+          shadowRadius: 2,
+          elevation: 2,
+        }}
       >
         {renderMessageContent(message.content)}
       </View>
@@ -272,7 +304,7 @@ export default function ChatScreen() {
   const renderSidebar = () => (
     <View className="bg-black" style={{ width: isTablet ? 320 : width * 0.85 }}>
       {/* Sidebar Header */}
-      <View className="p-4 mx-2 mt-2 mb-4 bg-gray-900 rounded-lg">
+      <View className="p-4 mx-2 mt-2 mb-4 bg-black rounded-lg">
         <View className="flex-row justify-between items-center mb-3">
           <Text className="text-white text-xl font-bold">Chats</Text>
           <View className="flex-row items-center">
@@ -333,7 +365,7 @@ export default function ChatScreen() {
   const renderChatArea = () => (
     <View className="flex-1 bg-black">
       {/* Header */}
-      <View className="mx-2 mt-2 mb-4 p-4 bg-gray-900 rounded-lg flex-row items-center">
+      <View className="mx-2 mt-2 mb-4 p-4 bg-black rounded-lg flex-row items-center">
         {(isTablet && sidebarCollapsed) && (
           <TouchableOpacity
             onPress={() => setSidebarCollapsed(false)}
@@ -356,7 +388,7 @@ export default function ChatScreen() {
       </View>
 
       {/* Messages */}
-      <View className="flex-1 mx-2 mb-4 bg-gray-900 rounded-lg">
+      <View className="flex-1 mx-2 mb-4 bg-black rounded-lg">
         {chatLoading ? (
           <View className="flex-1 justify-center items-center">
             <ActivityIndicator size="large" color="#3B82F6" />
@@ -388,7 +420,7 @@ export default function ChatScreen() {
       <KeyboardAvoidingView
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
       >
-        <View className="mx-2 mb-2 p-4 bg-gray-900 rounded-lg flex-row items-end">
+        <View className="mx-2 mb-2 p-4 bg-black rounded-lg flex-row items-end">
           <TextInput
             value={inputText}
             onChangeText={setInputText}
