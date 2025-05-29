@@ -114,7 +114,7 @@ const MessageItem: React.FC<MessageItemProps> = ({ message }) => {
           parts.push(
             <Text 
               key={`text-${lastIndex}`} 
-              className={`text-base font-medium ${isUser ? '' : 'text-gray-100'}`}
+              className={`${isUser ? 'text-base font-medium' : 'text-lg font-normal leading-relaxed text-gray-100'}`}
               style={isUser ? gradientStyle : {}}
             >
               {textBefore}
@@ -140,7 +140,7 @@ const MessageItem: React.FC<MessageItemProps> = ({ message }) => {
         parts.push(
           <Text 
             key={`text-${lastIndex}`} 
-            className={`text-base font-medium ${isUser ? '' : 'text-gray-100'}`}
+            className={`${isUser ? 'text-base font-medium' : 'text-lg font-normal leading-relaxed text-gray-100'}`}
             style={isUser ? gradientStyle : {}}
           >
             {remainingText}
@@ -153,7 +153,7 @@ const MessageItem: React.FC<MessageItemProps> = ({ message }) => {
     if (parts.length === 0) {
       return (
         <Text 
-          className={`text-base font-medium ${isUser ? '' : 'text-gray-100'}`}
+          className={`${isUser ? 'text-base font-medium' : 'text-lg font-normal leading-relaxed text-gray-100'}`}
           style={isUser ? gradientStyle : {}}
         >
           {content}
@@ -166,28 +166,36 @@ const MessageItem: React.FC<MessageItemProps> = ({ message }) => {
 
   return (
     <View className={`mb-4 ${isUser ? 'items-end' : 'items-start'}`}>
-      <View
-        className={`max-w-[80%] p-4 ${
-          isUser
-            ? 'rounded-full bg-black border border-gray-400'
-            : 'rounded-2xl bg-gray-800 border border-gray-600'
-        }`}
-        style={isUser ? {
-          shadowColor: '#D1D5DB',
-          shadowOffset: { width: 0, height: 1 },
-          shadowOpacity: 0.3,
-          shadowRadius: 3,
-          elevation: 3,
-        } : {
-          shadowColor: '#374151',
-          shadowOffset: { width: 0, height: 1 },
-          shadowOpacity: 0.2,
-          shadowRadius: 2,
-          elevation: 2,
-        }}
-      >
-        {renderMessageContent(message.content)}
-      </View>
+      {!isUser ? (
+        // AI Message with elegant border
+        <View 
+          className="max-w-[85%] p-6 rounded-2xl bg-black border border-gray-500"
+          style={{
+            borderColor: 'rgba(156, 163, 175, 0.3)',
+            shadowColor: '#000',
+            shadowOffset: { width: 0, height: 4 },
+            shadowOpacity: 0.3,
+            shadowRadius: 8,
+            elevation: 8,
+          }}
+        >
+          {renderMessageContent(message.content)}
+        </View>
+      ) : (
+        // User Message
+        <View
+          className="max-w-[80%] px-4 py-2 rounded-2xl bg-black border border-gray-400"
+          style={{
+            shadowColor: '#D1D5DB',
+            shadowOffset: { width: 0, height: 1 },
+            shadowOpacity: 0.3,
+            shadowRadius: 3,
+            elevation: 3,
+          }}
+        >
+          {renderMessageContent(message.content)}
+        </View>
+      )}
       <Text className="text-gray-500 text-xs mt-1">
         {message.timestamp.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
       </Text>
