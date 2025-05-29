@@ -104,7 +104,7 @@ const MessageItem: React.FC<MessageItemProps> = ({ message }) => {
       WebkitBackgroundClip: 'text',
       color: 'transparent',
       WebkitTextFillColor: 'transparent',
-    } : {};
+    } : { color: '#656568' };
 
     while ((match = codeBlockRegex.exec(content)) !== null) {
       // Add text before code block
@@ -114,8 +114,8 @@ const MessageItem: React.FC<MessageItemProps> = ({ message }) => {
           parts.push(
             <Text 
               key={`text-${lastIndex}`} 
-              className={`${isUser ? 'text-base font-medium' : 'text-lg font-normal leading-relaxed text-gray-100'}`}
-              style={isUser ? gradientStyle : {}}
+              className={`${isUser ? 'text-base font-medium' : 'text-lg font-normal leading-relaxed'}`}
+              style={isUser ? gradientStyle : { color: '#656568' }}
             >
               {textBefore}
             </Text>
@@ -140,8 +140,8 @@ const MessageItem: React.FC<MessageItemProps> = ({ message }) => {
         parts.push(
           <Text 
             key={`text-${lastIndex}`} 
-            className={`${isUser ? 'text-base font-medium' : 'text-lg font-normal leading-relaxed text-gray-100'}`}
-            style={isUser ? gradientStyle : {}}
+            className={`${isUser ? 'text-base font-medium' : 'text-lg font-normal leading-relaxed'}`}
+            style={isUser ? gradientStyle : { color: '#656568' }}
           >
             {remainingText}
           </Text>
@@ -153,8 +153,8 @@ const MessageItem: React.FC<MessageItemProps> = ({ message }) => {
     if (parts.length === 0) {
       return (
         <Text 
-          className={`${isUser ? 'text-base font-medium' : 'text-lg font-normal leading-relaxed text-gray-100'}`}
-          style={isUser ? gradientStyle : {}}
+          className={`${isUser ? 'text-base font-medium' : 'text-lg font-normal leading-relaxed'}`}
+          style={isUser ? gradientStyle : { color: '#656568' }}
         >
           {content}
         </Text>
@@ -167,52 +167,9 @@ const MessageItem: React.FC<MessageItemProps> = ({ message }) => {
   return (
     <View className={`mb-4 ${isUser ? 'items-end' : 'items-start'}`}>
       {!isUser ? (
-        // AI Message with gradient border matching user text gradient
-        <View className="max-w-[85%] relative" style={{
-          shadowColor: '#000',
-          shadowOffset: { width: 0, height: 4 },
-          shadowOpacity: 0.3,
-          shadowRadius: 8,
-          elevation: 8,
-        }}>
-          {/* Gradient border effect - ultra smooth fade from sides to middle */}
-          <View className="absolute inset-0 rounded-2xl overflow-hidden flex-row">
-            {/* Left side - strong to fade */}
-            <View className="w-2 rounded-l-2xl" style={{ backgroundColor: 'rgba(179, 174, 245, 0.65)' }} />
-            <View className="w-2" style={{ backgroundColor: 'rgba(185, 180, 246, 0.6)' }} />
-            <View className="w-2" style={{ backgroundColor: 'rgba(191, 186, 247, 0.55)' }} />
-            <View className="w-2" style={{ backgroundColor: 'rgba(197, 192, 248, 0.5)' }} />
-            <View className="w-2" style={{ backgroundColor: 'rgba(203, 198, 240, 0.45)' }} />
-            <View className="w-2" style={{ backgroundColor: 'rgba(209, 204, 235, 0.4)' }} />
-            <View className="w-2" style={{ backgroundColor: 'rgba(215, 210, 230, 0.35)' }} />
-            <View className="w-2" style={{ backgroundColor: 'rgba(221, 216, 225, 0.3)' }} />
-            <View className="w-2" style={{ backgroundColor: 'rgba(227, 222, 220, 0.25)' }} />
-            <View className="w-2" style={{ backgroundColor: 'rgba(230, 225, 215, 0.2)' }} />
-            <View className="w-2" style={{ backgroundColor: 'rgba(232, 227, 210, 0.15)' }} />
-            <View className="w-2" style={{ backgroundColor: 'rgba(233, 228, 205, 0.1)' }} />
-            
-            {/* Center - almost invisible */}
-            <View className="flex-1" style={{ backgroundColor: 'rgba(234, 229, 200, 0.05)' }} />
-            
-            {/* Right side - fade to strong */}
-            <View className="w-2" style={{ backgroundColor: 'rgba(233, 220, 190, 0.1)' }} />
-            <View className="w-2" style={{ backgroundColor: 'rgba(232, 210, 180, 0.15)' }} />
-            <View className="w-2" style={{ backgroundColor: 'rgba(231, 200, 170, 0.2)' }} />
-            <View className="w-2" style={{ backgroundColor: 'rgba(230, 190, 160, 0.25)' }} />
-            <View className="w-2" style={{ backgroundColor: 'rgba(229, 185, 155, 0.3)' }} />
-            <View className="w-2" style={{ backgroundColor: 'rgba(230, 180, 150, 0.35)' }} />
-            <View className="w-2" style={{ backgroundColor: 'rgba(231, 175, 145, 0.4)' }} />
-            <View className="w-2" style={{ backgroundColor: 'rgba(232, 170, 140, 0.45)' }} />
-            <View className="w-2" style={{ backgroundColor: 'rgba(233, 169, 135, 0.5)' }} />
-            <View className="w-2" style={{ backgroundColor: 'rgba(234, 168, 130, 0.55)' }} />
-            <View className="w-2" style={{ backgroundColor: 'rgba(234, 168, 125, 0.6)' }} />
-            <View className="w-2 rounded-r-2xl" style={{ backgroundColor: 'rgba(234, 168, 121, 0.65)' }} />
-          </View>
-          
-          {/* Inner content with black background */}
-          <View className="m-px p-6 rounded-2xl bg-black">
-            {renderMessageContent(message.content)}
-          </View>
+        // AI Message with custom background
+        <View className="max-w-[85%] p-6 rounded-2xl" style={{ backgroundColor: '#151519' }}>
+          {renderMessageContent(message.content)}
         </View>
       ) : (
         // User Message
