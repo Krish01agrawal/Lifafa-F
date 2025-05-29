@@ -2,24 +2,22 @@ import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
 import React from 'react';
 import {
-  ActivityIndicator,
-  Alert,
-  Dimensions,
-  FlatList,
-  Text,
-  TouchableOpacity,
-  View
+    ActivityIndicator,
+    Alert,
+    Dimensions,
+    FlatList,
+    Text,
+    TouchableOpacity,
+    View,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { CodeBlock } from '../../components/chat/CodeBlock';
 import {
-  useChats,
-  useDeleteChat
-} from '../../hooks/useChatQueries';
-import { Chat, Message } from '../../services/chatApi';
+    useChats,
+    useDeleteChat,
+} from '../hooks/useChatQueries';
+import { Chat } from '../services/chatApi';
 
 const { width } = Dimensions.get('window');
-const isTablet = width > 768;
 
 interface ChatItemProps {
   chat: Chat;
@@ -75,85 +73,6 @@ const ChatItem: React.FC<ChatItemProps> = ({ chat, onDelete }) => {
         </Text>
       </View>
     </TouchableOpacity>
-  );
-};
-
-interface MessageItemProps {
-  message: Message;
-}
-
-const MessageItem: React.FC<MessageItemProps> = ({ message }) => {
-  const isUser = message.role === 'user';
-
-  // Parse message content for code blocks
-  const renderMessageContent = (content: string) => {
-    const codeBlockRegex = /```(\w+)?\n([\s\S]*?)```/g;
-    const parts = [];
-    let lastIndex = 0;
-    let match;
-
-    while ((match = codeBlockRegex.exec(content)) !== null) {
-      // Add text before code block
-      if (match.index > lastIndex) {
-        const textBefore = content.slice(lastIndex, match.index);
-        if (textBefore.trim()) {
-          parts.push(
-            <Text key={`text-${lastIndex}`} className={`text-base ${isUser ? 'text-white' : 'text-gray-100'}`}>
-              {textBefore}
-            </Text>
-          );
-        }
-      }
-
-      // Add code block
-      const language = match[1] || 'javascript';
-      const code = match[2].trim();
-      parts.push(
-        <CodeBlock key={`code-${match.index}`} language={language} code={code} />
-      );
-
-      lastIndex = match.index + match[0].length;
-    }
-
-    // Add remaining text
-    if (lastIndex < content.length) {
-      const remainingText = content.slice(lastIndex);
-      if (remainingText.trim()) {
-        parts.push(
-          <Text key={`text-${lastIndex}`} className={`text-base ${isUser ? 'text-white' : 'text-gray-100'}`}>
-            {remainingText}
-          </Text>
-        );
-      }
-    }
-
-    // If no code blocks found, return simple text
-    if (parts.length === 0) {
-      return (
-        <Text className={`text-base ${isUser ? 'text-white' : 'text-gray-100'}`}>
-          {content}
-        </Text>
-      );
-    }
-
-    return <View>{parts}</View>;
-  };
-
-  return (
-    <View className={`mb-4 ${isUser ? 'items-end' : 'items-start'}`}>
-      <View
-        className={`max-w-[80%] p-3 rounded-2xl ${
-          isUser
-            ? 'bg-blue-600 rounded-br-md'
-            : 'bg-gray-800 rounded-bl-md'
-        }`}
-      >
-        {renderMessageContent(message.content)}
-      </View>
-      <Text className="text-gray-500 text-xs mt-1">
-        {message.timestamp.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-      </Text>
-    </View>
   );
 };
 
@@ -236,4 +155,4 @@ export default function ChatListScreen() {
       )}
     </SafeAreaView>
   );
-}
+} 
