@@ -175,12 +175,38 @@ const MessageItem: React.FC<MessageItemProps> = ({ message }) => {
           shadowRadius: 8,
           elevation: 8,
         }}>
-          {/* Gradient border effect using horizontal segments */}
+          {/* Gradient border effect - ultra smooth fade from sides to middle */}
           <View className="absolute inset-0 rounded-2xl overflow-hidden flex-row">
-            <View className="flex-1 rounded-l-2xl" style={{ backgroundColor: 'rgba(179, 174, 245, 0.6)' }} />
-            <View className="flex-1" style={{ backgroundColor: 'rgba(215, 203, 231, 0.6)' }} />
-            <View className="flex-1" style={{ backgroundColor: 'rgba(229, 200, 200, 0.6)' }} />
-            <View className="flex-1 rounded-r-2xl" style={{ backgroundColor: 'rgba(234, 168, 121, 0.6)' }} />
+            {/* Left side - strong to fade */}
+            <View className="w-2 rounded-l-2xl" style={{ backgroundColor: 'rgba(179, 174, 245, 0.65)' }} />
+            <View className="w-2" style={{ backgroundColor: 'rgba(185, 180, 246, 0.6)' }} />
+            <View className="w-2" style={{ backgroundColor: 'rgba(191, 186, 247, 0.55)' }} />
+            <View className="w-2" style={{ backgroundColor: 'rgba(197, 192, 248, 0.5)' }} />
+            <View className="w-2" style={{ backgroundColor: 'rgba(203, 198, 240, 0.45)' }} />
+            <View className="w-2" style={{ backgroundColor: 'rgba(209, 204, 235, 0.4)' }} />
+            <View className="w-2" style={{ backgroundColor: 'rgba(215, 210, 230, 0.35)' }} />
+            <View className="w-2" style={{ backgroundColor: 'rgba(221, 216, 225, 0.3)' }} />
+            <View className="w-2" style={{ backgroundColor: 'rgba(227, 222, 220, 0.25)' }} />
+            <View className="w-2" style={{ backgroundColor: 'rgba(230, 225, 215, 0.2)' }} />
+            <View className="w-2" style={{ backgroundColor: 'rgba(232, 227, 210, 0.15)' }} />
+            <View className="w-2" style={{ backgroundColor: 'rgba(233, 228, 205, 0.1)' }} />
+            
+            {/* Center - almost invisible */}
+            <View className="flex-1" style={{ backgroundColor: 'rgba(234, 229, 200, 0.05)' }} />
+            
+            {/* Right side - fade to strong */}
+            <View className="w-2" style={{ backgroundColor: 'rgba(233, 220, 190, 0.1)' }} />
+            <View className="w-2" style={{ backgroundColor: 'rgba(232, 210, 180, 0.15)' }} />
+            <View className="w-2" style={{ backgroundColor: 'rgba(231, 200, 170, 0.2)' }} />
+            <View className="w-2" style={{ backgroundColor: 'rgba(230, 190, 160, 0.25)' }} />
+            <View className="w-2" style={{ backgroundColor: 'rgba(229, 185, 155, 0.3)' }} />
+            <View className="w-2" style={{ backgroundColor: 'rgba(230, 180, 150, 0.35)' }} />
+            <View className="w-2" style={{ backgroundColor: 'rgba(231, 175, 145, 0.4)' }} />
+            <View className="w-2" style={{ backgroundColor: 'rgba(232, 170, 140, 0.45)' }} />
+            <View className="w-2" style={{ backgroundColor: 'rgba(233, 169, 135, 0.5)' }} />
+            <View className="w-2" style={{ backgroundColor: 'rgba(234, 168, 130, 0.55)' }} />
+            <View className="w-2" style={{ backgroundColor: 'rgba(234, 168, 125, 0.6)' }} />
+            <View className="w-2 rounded-r-2xl" style={{ backgroundColor: 'rgba(234, 168, 121, 0.65)' }} />
           </View>
           
           {/* Inner content with black background */}
