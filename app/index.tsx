@@ -1,4 +1,5 @@
 import { Ionicons } from '@expo/vector-icons';
+import { router, useLocalSearchParams } from 'expo-router';
 import React, { useEffect, useRef, useState } from 'react';
 import {
     ActivityIndicator,
@@ -163,25 +164,25 @@ const MessageItem: React.FC<MessageItemProps> = ({ message }) => {
 };
 
 export default function ChatScreen() {
-  const [selectedChatId, setSelectedChatId] = useState<string | null>(null);
+  const { chatId } = useLocalSearchParams<{ chatId?: string }>();
   const [inputText, setInputText] = useState('');
   const [showSidebar, setShowSidebar] = useState(isTablet);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const flatListRef = useRef<FlatList>(null);
 
   const { data: chats = [], isLoading: chatsLoading } = useChats();
-  const { data: currentChat, isLoading: chatLoading } = useChat(selectedChatId || '');
+  const { data: currentChat, isLoading: chatLoading } = useChat(chatId || '');
   const createChatMutation = useCreateChat();
   const sendMessageMutation = useSendMessage();
   const getAIResponseMutation = useGetAIResponse();
   const deleteChatMutation = useDeleteChat();
 
-  // Auto-select first chat on load for larger screens
+  // Auto-select first chat on load for larger screens if no chat is selected
   useEffect(() => {
-    if (chats.length > 0 && !selectedChatId && isTablet) {
-      setSelectedChatId(chats[0].id);
+    if (chats.length > 0 && !chatId && isTablet) {
+      router.replace(`/?chatId=${chats[0].id}`);
     }
-  }, [chats, selectedChatId, isTablet]);
+  }, [chats, chatId, isTablet]);
 
   // Scroll to bottom when new messages arrive
   useEffect(() => {
@@ -199,29 +200,29 @@ export default function ChatScreen() {
     setInputText('');
 
     try {
-      let chatId = selectedChatId;
+      let activeChatId = chatId;
 
       // Create new chat if none selected
-      if (!chatId) {
+      if (!activeChatId) {
         const newChat = await createChatMutation.mutateAsync(messageContent);
-        chatId = newChat.id;
-        setSelectedChatId(chatId);
+        activeChatId = newChat.id;
+        router.push(`/?chatId=${activeChatId}`);
         
         // Get AI response for new chat
         await getAIResponseMutation.mutateAsync({
-          chatId,
+          chatId: activeChatId,
           userMessage: messageContent,
         });
       } else {
         // Send message to existing chat
         await sendMessageMutation.mutateAsync({
-          chatId,
+          chatId: activeChatId,
           content: messageContent,
         });
 
         // Get AI response
         await getAIResponseMutation.mutateAsync({
-          chatId,
+          chatId: activeChatId,
           userMessage: messageContent,
         });
       }
@@ -231,11 +232,16 @@ export default function ChatScreen() {
     }
   };
 
-  const handleDeleteChat = async (chatId: string) => {
+  const handleDeleteChat = async (chatIdToDelete: string) => {
     try {
-      await deleteChatMutation.mutateAsync(chatId);
-      if (selectedChatId === chatId) {
-        setSelectedChatId(chats.length > 1 ? chats.find(c => c.id !== chatId)?.id || null : null);
+      await deleteChatMutation.mutateAsync(chatIdToDelete);
+      if (chatId === chatIdToDelete) {
+        const remainingChats = chats.filter(c => c.id !== chatIdToDelete);
+        if (remainingChats.length > 0) {
+          router.replace(`/?chatId=${remainingChats[0].id}`);
+        } else {
+          router.replace('/');
+        }
       }
     } catch (error) {
       console.error('Error deleting chat:', error);
@@ -244,12 +250,12 @@ export default function ChatScreen() {
   };
 
   const handleNewChat = async () => {
-    setSelectedChatId(null);
+    router.push('/');
     setShowSidebar(false);
   };
 
-  const handleSelectChat = (chatId: string) => {
-    setSelectedChatId(chatId);
+  const handleSelectChat = (selectedChatId: string) => {
+    router.push(`/?chatId=${selectedChatId}`);
     if (!isTablet) {
       setShowSidebar(false);
     }
@@ -310,7 +316,7 @@ export default function ChatScreen() {
           renderItem={({ item }) => (
             <ChatItem
               chat={item}
-              isSelected={item.id === selectedChatId}
+              isSelected={item.id === chatId}
               onSelect={handleSelectChat}
               onDelete={handleDeleteChat}
             />
