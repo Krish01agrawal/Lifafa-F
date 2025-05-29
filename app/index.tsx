@@ -63,7 +63,7 @@ const ChatItem: React.FC<ChatItemProps> = ({ chat, isSelected, onSelect, onDelet
 
   return (
     <TouchableOpacity
-      className={`p-4 border-b border-gray-800 ${isSelected ? 'bg-gray-800' : 'bg-black'} ${isSelected ? 'border-l-4 border-l-blue-500' : ''}`}
+      className={`p-4 mx-2 my-1 rounded-lg ${isSelected ? 'bg-gray-800' : 'bg-gray-900'} ${isSelected ? 'border-l-4 border-l-blue-500' : ''}`}
       onPress={() => onSelect(chat.id)}
       onLongPress={handleDelete}
     >
@@ -270,9 +270,9 @@ export default function ChatScreen() {
   };
 
   const renderSidebar = () => (
-    <View className="bg-black border-r border-gray-800" style={{ width: isTablet ? 320 : width * 0.85 }}>
+    <View className="bg-black" style={{ width: isTablet ? 320 : width * 0.85 }}>
       {/* Sidebar Header */}
-      <View className="p-4 border-b border-gray-800">
+      <View className="p-4 mx-2 mt-2 mb-4 bg-gray-900 rounded-lg">
         <View className="flex-row justify-between items-center mb-3">
           <Text className="text-white text-xl font-bold">Chats</Text>
           <View className="flex-row items-center">
@@ -305,33 +305,35 @@ export default function ChatScreen() {
       </View>
 
       {/* Chat List */}
-      {chatsLoading ? (
-        <View className="flex-1 justify-center items-center">
-          <ActivityIndicator size="large" color="#3B82F6" />
-        </View>
-      ) : (
-        <FlatList
-          data={chats}
-          keyExtractor={(item) => item.id}
-          renderItem={({ item }) => (
-            <ChatItem
-              chat={item}
-              isSelected={item.id === chatId}
-              onSelect={handleSelectChat}
-              onDelete={handleDeleteChat}
-            />
-          )}
-          className="flex-1"
-          showsVerticalScrollIndicator={false}
-        />
-      )}
+      <View className="flex-1 px-2">
+        {chatsLoading ? (
+          <View className="flex-1 justify-center items-center">
+            <ActivityIndicator size="large" color="#3B82F6" />
+          </View>
+        ) : (
+          <FlatList
+            data={chats}
+            keyExtractor={(item) => item.id}
+            renderItem={({ item }) => (
+              <ChatItem
+                chat={item}
+                isSelected={item.id === chatId}
+                onSelect={handleSelectChat}
+                onDelete={handleDeleteChat}
+              />
+            )}
+            className="flex-1"
+            showsVerticalScrollIndicator={false}
+          />
+        )}
+      </View>
     </View>
   );
 
   const renderChatArea = () => (
     <View className="flex-1 bg-black">
       {/* Header */}
-      <View className="p-4 border-b border-gray-800 flex-row items-center">
+      <View className="mx-2 mt-2 mb-4 p-4 bg-gray-900 rounded-lg flex-row items-center">
         {(isTablet && sidebarCollapsed) && (
           <TouchableOpacity
             onPress={() => setSidebarCollapsed(false)}
@@ -354,7 +356,7 @@ export default function ChatScreen() {
       </View>
 
       {/* Messages */}
-      <View className="flex-1">
+      <View className="flex-1 mx-2 mb-4 bg-gray-900 rounded-lg">
         {chatLoading ? (
           <View className="flex-1 justify-center items-center">
             <ActivityIndicator size="large" color="#3B82F6" />
@@ -385,9 +387,8 @@ export default function ChatScreen() {
       {/* Input Area */}
       <KeyboardAvoidingView
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-        className="border-t border-gray-800"
       >
-        <View className="p-4 flex-row items-end">
+        <View className="mx-2 mb-2 p-4 bg-gray-900 rounded-lg flex-row items-end">
           <TextInput
             value={inputText}
             onChangeText={setInputText}
@@ -404,7 +405,7 @@ export default function ChatScreen() {
             className={`p-3 rounded-full ${
               inputText.trim() && !sendMessageMutation.isPending && !getAIResponseMutation.isPending
                 ? 'bg-blue-600'
-                : 'bg-gray-700'
+                : 'bg-gray-600'
             }`}
           >
             {sendMessageMutation.isPending || getAIResponseMutation.isPending ? (
