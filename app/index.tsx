@@ -167,19 +167,26 @@ const MessageItem: React.FC<MessageItemProps> = ({ message }) => {
   return (
     <View className={`mb-4 ${isUser ? 'items-end' : 'items-start'}`}>
       {!isUser ? (
-        // AI Message with elegant border
-        <View 
-          className="max-w-[85%] p-6 rounded-2xl bg-black border border-gray-500"
-          style={{
-            borderColor: 'rgba(156, 163, 175, 0.3)',
-            shadowColor: '#000',
-            shadowOffset: { width: 0, height: 4 },
-            shadowOpacity: 0.3,
-            shadowRadius: 8,
-            elevation: 8,
-          }}
-        >
-          {renderMessageContent(message.content)}
+        // AI Message with gradient border matching user text gradient
+        <View className="max-w-[85%] relative" style={{
+          shadowColor: '#000',
+          shadowOffset: { width: 0, height: 4 },
+          shadowOpacity: 0.3,
+          shadowRadius: 8,
+          elevation: 8,
+        }}>
+          {/* Gradient border effect using horizontal segments */}
+          <View className="absolute inset-0 rounded-2xl overflow-hidden flex-row">
+            <View className="flex-1 rounded-l-2xl" style={{ backgroundColor: 'rgba(179, 174, 245, 0.6)' }} />
+            <View className="flex-1" style={{ backgroundColor: 'rgba(215, 203, 231, 0.6)' }} />
+            <View className="flex-1" style={{ backgroundColor: 'rgba(229, 200, 200, 0.6)' }} />
+            <View className="flex-1 rounded-r-2xl" style={{ backgroundColor: 'rgba(234, 168, 121, 0.6)' }} />
+          </View>
+          
+          {/* Inner content with black background */}
+          <View className="m-px p-6 rounded-2xl bg-black">
+            {renderMessageContent(message.content)}
+          </View>
         </View>
       ) : (
         // User Message
