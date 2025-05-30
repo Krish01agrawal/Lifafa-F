@@ -1,7 +1,5 @@
+import { getApiUrl, log, logError } from '../constants/Config';
 import { UserProfile } from '../contexts/AuthContext';
-
-// You'll need to replace this with your actual backend URL
-const API_BASE_URL = process.env.EXPO_PUBLIC_API_URL || 'http://localhost:3000';
 
 export interface GoogleLoginResponse {
   token: string;
@@ -15,7 +13,9 @@ export interface GmailAuthData {
 class AuthApiService {
   async googleLogin(): Promise<GoogleLoginResponse> {
     try {
-      const response = await fetch(`${API_BASE_URL}/auth/google-login`, {
+      log('Attempting Google login...');
+      
+      const response = await fetch(getApiUrl('/auth/google-login'), {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -28,16 +28,19 @@ class AuthApiService {
       }
 
       const data = await response.json();
+      log('Google login successful', { userId: data.user?.email });
       return data;
     } catch (error) {
-      console.error('Google login error:', error);
+      logError('Google login error', error);
       throw error;
     }
   }
 
   async fetchGmailData(gmailToken: string): Promise<void> {
     try {
-      const response = await fetch(`${API_BASE_URL}/gmail/fetch`, {
+      log('Fetching Gmail data...');
+      
+      const response = await fetch(getApiUrl('/gmail/fetch'), {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -49,16 +52,19 @@ class AuthApiService {
         throw new Error(`Gmail fetch failed: ${response.statusText}`);
       }
 
+      log('Gmail data fetch completed successfully');
       // This endpoint stores data in MongoDB and mem0, no return data needed
     } catch (error) {
-      console.error('Gmail fetch error:', error);
+      logError('Gmail fetch error', error);
       throw error;
     }
   }
 
   async logout(token: string): Promise<void> {
     try {
-      const response = await fetch(`${API_BASE_URL}/logout`, {
+      log('Logging out user...');
+      
+      const response = await fetch(getApiUrl('/logout'), {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -69,8 +75,10 @@ class AuthApiService {
       if (!response.ok) {
         throw new Error(`Logout failed: ${response.statusText}`);
       }
+
+      log('Logout successful');
     } catch (error) {
-      console.error('Logout error:', error);
+      logError('Logout error', error);
       throw error;
     }
   }

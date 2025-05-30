@@ -1,3 +1,4 @@
+import { getApiUrl, log, logError } from '../constants/Config';
 import { AUTH_KEYS, storage } from '../utils/storage';
 
 export interface Message {
@@ -17,9 +18,6 @@ export interface Chat {
   createdAt: Date;
 }
 
-// API Configuration
-const API_BASE_URL = process.env.EXPO_PUBLIC_API_URL || 'http://localhost:3000';
-
 // Helper function to get auth token
 const getAuthToken = async (): Promise<string> => {
   const token = await storage.getItem(AUTH_KEYS.TOKEN);
@@ -30,10 +28,12 @@ const getAuthToken = async (): Promise<string> => {
 };
 
 // Helper function to make authenticated requests
-const makeAuthenticatedRequest = async (url: string, options: RequestInit = {}) => {
+const makeAuthenticatedRequest = async (endpoint: string, options: RequestInit = {}) => {
   const token = await getAuthToken();
   
-  const response = await fetch(url, {
+  log('Making authenticated request', { endpoint, method: options.method || 'GET' });
+  
+  const response = await fetch(getApiUrl(endpoint), {
     ...options,
     headers: {
       'Authorization': `Bearer ${token}`,
@@ -44,8 +44,10 @@ const makeAuthenticatedRequest = async (url: string, options: RequestInit = {}) 
 
   if (!response.ok) {
     if (response.status === 401) {
+      logError('Authentication failed - token may be expired', { status: response.status });
       throw new Error('Authentication failed. Please login again.');
     }
+    logError('Request failed', { status: response.status, statusText: response.statusText });
     throw new Error(`Request failed: ${response.statusText}`);
   }
 
@@ -62,7 +64,7 @@ export const chatApi = {
     
     try {
       const response = await makeAuthenticatedRequest(
-        `${API_BASE_URL}/chat/history?page=${page}&limit=${limit}`
+        `/chat/history?page=${page}&limit=${limit}`
       );
       
       const data = await response.json();
@@ -83,7 +85,7 @@ export const chatApi = {
         createdAt: new Date(chat.createdAt),
       }));
     } catch (error) {
-      console.error('Error fetching chats:', error);
+      logError('Error fetching chats', error);
       throw error;
     }
   },
@@ -93,8 +95,9 @@ export const chatApi = {
     await delay(200);
     
     try {
+      log('Fetching chat', { chatId });
       const response = await makeAuthenticatedRequest(
-        `${API_BASE_URL}/chat/${chatId}`
+        `/chat/${chatId}`
       );
       
       const chat = await response.json();
@@ -114,7 +117,7 @@ export const chatApi = {
         createdAt: new Date(chat.createdAt),
       };
     } catch (error) {
-      console.error('Error fetching chat:', error);
+      logError('Error fetching chat', { chatId, error });
       return null;
     }
   },
@@ -124,8 +127,9 @@ export const chatApi = {
     await delay(400);
     
     try {
+      log('Creating new chat', { messagePreview: firstMessage.substring(0, 50) });
       const response = await makeAuthenticatedRequest(
-        `${API_BASE_URL}/chat`,
+        `/chat`,
         {
           method: 'POST',
           body: JSON.stringify({
@@ -152,7 +156,7 @@ export const chatApi = {
         createdAt: new Date(chat.createdAt),
       };
     } catch (error) {
-      console.error('Error creating chat:', error);
+      logError('Error creating chat', error);
       throw error;
     }
   },
@@ -162,8 +166,9 @@ export const chatApi = {
     await delay(300);
     
     try {
+      log('Sending message', { chatId, messagePreview: content.substring(0, 50) });
       const response = await makeAuthenticatedRequest(
-        `${API_BASE_URL}/chat/${chatId}`,
+        `/chat/${chatId}`,
         {
           method: 'PUT',
           body: JSON.stringify({
@@ -183,7 +188,7 @@ export const chatApi = {
         chatId,
       };
     } catch (error) {
-      console.error('Error sending message:', error);
+      logError('Error sending message', { chatId, error });
       throw error;
     }
   },
@@ -193,10 +198,11 @@ export const chatApi = {
     await delay(1000 + Math.random() * 2000); // 1-3 seconds delay
     
     try {
+      log('Getting AI response', { chatId, userMessagePreview: userMessage.substring(0, 50) });
       // For now, we'll use the update endpoint to get AI response
       // In the future, this will be handled via WebSocket
       const response = await makeAuthenticatedRequest(
-        `${API_BASE_URL}/chat/${chatId}`,
+        `/chat/${chatId}`,
         {
           method: 'PUT',
           body: JSON.stringify({
@@ -211,13 +217,13 @@ export const chatApi = {
       
       return {
         id: result.aiMessageId || Date.now().toString(),
-        content: result.aiResponse || "I'm processing your request...",
+        content: result.aiResponse || 'Sorry, I could not generate a response.',
         role: 'assistant',
         timestamp: new Date(),
         chatId,
       };
     } catch (error) {
-      console.error('Error getting AI response:', error);
+      logError('Error getting AI response', { chatId, error });
       throw error;
     }
   },
@@ -227,25 +233,27 @@ export const chatApi = {
     await delay(200);
     
     try {
+      log('Deleting chat', { chatId });
       await makeAuthenticatedRequest(
-        `${API_BASE_URL}/chat/${chatId}`,
+        `/chat/${chatId}`,
         {
           method: 'DELETE',
         }
       );
     } catch (error) {
-      console.error('Error deleting chat:', error);
+      logError('Error deleting chat', { chatId, error });
       throw error;
     }
   },
 
   // Update chat title
-  updateChatTitle: async (chatId: string, title: string): Promise<Chat> => {
+  updateChatTitle: async (chatId: string, title: string): Promise<void> => {
     await delay(200);
     
     try {
+      log('Updating chat title', { chatId, title });
       const response = await makeAuthenticatedRequest(
-        `${API_BASE_URL}/chat/${chatId}`,
+        `/chat/${chatId}`,
         {
           method: 'PUT',
           body: JSON.stringify({
@@ -254,24 +262,11 @@ export const chatApi = {
         }
       );
       
-      const chat = await response.json();
-      
-      return {
-        id: chat.id,
-        title: chat.title,
-        lastMessage: chat.lastMessage,
-        lastMessageTime: new Date(chat.lastMessageTime),
-        messages: chat.messages?.map((msg: any) => ({
-          id: msg.id,
-          content: msg.content,
-          role: msg.role,
-          timestamp: new Date(msg.timestamp),
-          chatId: chat.id,
-        })) || [],
-        createdAt: new Date(chat.createdAt),
-      };
+      if (!response.ok) {
+        throw new Error(`Failed to update chat title: ${response.statusText}`);
+      }
     } catch (error) {
-      console.error('Error updating chat title:', error);
+      logError('Error updating chat title', { chatId, title, error });
       throw error;
     }
   },
