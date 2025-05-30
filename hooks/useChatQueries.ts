@@ -11,11 +11,11 @@ export const chatKeys = {
 };
 
 // Get all chats
-export const useChats = () => {
+export const useChats = (): { data: Chat[], isLoading: boolean, error: any } => {
   return useQuery({
     queryKey: chatKeys.lists(),
-    queryFn: chatApi.getChats,
-  });
+    queryFn: () => chatApi.getChats(),
+  }) as { data: Chat[], isLoading: boolean, error: any };
 };
 
 // Get a specific chat

@@ -6,16 +6,18 @@ import {
     Alert,
     Dimensions,
     FlatList,
+    Image,
     KeyboardAvoidingView,
     Platform,
     Text,
     TextInput,
     TouchableOpacity,
-    View,
+    View
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { CodeBlock } from '../components/chat/CodeBlock';
 import { TypingIndicator } from '../components/chat/TypingIndicator';
+import { useAuth } from '../contexts/AuthContext';
 import {
     useChat,
     useChats,
@@ -200,6 +202,7 @@ export default function ChatScreen() {
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const flatListRef = useRef<FlatList>(null);
 
+  const { user, logout } = useAuth();
   const { data: chats = [], isLoading: chatsLoading } = useChats();
   const { data: currentChat, isLoading: chatLoading } = useChat(chatId || '');
   const createChatMutation = useCreateChat();
@@ -207,12 +210,15 @@ export default function ChatScreen() {
   const getAIResponseMutation = useGetAIResponse();
   const deleteChatMutation = useDeleteChat();
 
+  // Ensure chats is properly typed
+  const typedChats = (chats as Chat[]) || [];
+
   // Auto-select first chat on load for larger screens if no chat is selected and not in new chat mode
   useEffect(() => {
-    if (chats.length > 0 && !chatId && !newChat && isTablet) {
-      router.replace(`/?chatId=${chats[0].id}`);
+    if (typedChats.length > 0 && !chatId && !newChat && isTablet) {
+      router.replace(`/?chatId=${typedChats[0].id}`);
     }
-  }, [chats, chatId, newChat, isTablet]);
+  }, [typedChats, chatId, newChat, isTablet]);
 
   // Scroll to bottom when new messages arrive
   useEffect(() => {
@@ -266,7 +272,7 @@ export default function ChatScreen() {
     try {
       await deleteChatMutation.mutateAsync(chatIdToDelete);
       if (chatId === chatIdToDelete) {
-        const remainingChats = chats.filter(c => c.id !== chatIdToDelete);
+        const remainingChats = typedChats.filter(c => c.id !== chatIdToDelete);
         if (remainingChats.length > 0) {
           router.replace(`/?chatId=${remainingChats[0].id}`);
         } else {
@@ -301,8 +307,41 @@ export default function ChatScreen() {
 
   const renderSidebar = () => (
     <View className="bg-black" style={{ width: isTablet ? 320 : width * 0.85 }}>
+      {/* User Profile Header */}
+      {user && (
+        <View className="p-4 mx-2 mt-2 mb-2 bg-gray-900 rounded-lg">
+          <View className="flex-row items-center">
+            <Image
+              source={{ uri: user.profilePicUrl }}
+              className="w-12 h-12 rounded-full mr-3"
+            />
+            <View className="flex-1">
+              <Text className="text-white font-medium text-base" numberOfLines={1}>
+                {user.name}
+              </Text>
+              <Text className="text-gray-400 text-sm" numberOfLines={1}>
+                {user.email}
+              </Text>
+            </View>
+            <TouchableOpacity
+              onPress={async () => {
+                try {
+                  await logout();
+                  router.replace('/(auth)' as any);
+                } catch (error) {
+                  console.error('Logout failed:', error);
+                }
+              }}
+              className="p-2 rounded-lg bg-gray-800"
+            >
+              <Ionicons name="log-out-outline" size={20} color="#EF4444" />
+            </TouchableOpacity>
+          </View>
+        </View>
+      )}
+      
       {/* Sidebar Header */}
-      <View className="p-4 mx-2 mt-2 mb-4 bg-black rounded-lg">
+      <View className="p-4 mx-2 mb-4 bg-black rounded-lg">
         <View className="flex-row justify-between items-center mb-3">
           <Text className="text-white text-xl font-bold">Chats</Text>
           <View className="flex-row items-center">
@@ -342,7 +381,7 @@ export default function ChatScreen() {
           </View>
         ) : (
           <FlatList
-            data={chats}
+            data={typedChats}
             keyExtractor={(item) => item.id}
             renderItem={({ item }) => (
               <ChatItem
@@ -405,10 +444,10 @@ export default function ChatScreen() {
           <View className="flex-1 justify-center items-center p-8">
             <Ionicons name="chatbubbles-outline" size={64} color="#6B7280" />
             <Text className="text-gray-400 text-lg text-center mt-4">
-              {!chatId ? 'Ready to start chatting!' : (chats.length > 0 ? 'Select a chat to start messaging' : 'Start a conversation')}
+              {!chatId ? 'Ready to start chatting!' : (typedChats.length > 0 ? 'Select a chat to start messaging' : 'Start a conversation')}
             </Text>
             <Text className="text-gray-500 text-center mt-2">
-              {!chatId ? 'Type your first message below to begin' : (chats.length > 0 ? 'Choose a chat from the sidebar' : 'Type a message below to begin chatting')}
+              {!chatId ? 'Type your first message below to begin' : (typedChats.length > 0 ? 'Choose a chat from the sidebar' : 'Type a message below to begin chatting')}
             </Text>
           </View>
         )}
