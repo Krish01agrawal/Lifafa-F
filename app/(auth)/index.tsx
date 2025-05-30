@@ -1,14 +1,23 @@
 import { Ionicons } from '@expo/vector-icons';
-import { router } from 'expo-router';
 import React from 'react';
 import { Dimensions, Text, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { log } from '../../constants/Config';
+import { useAuth } from '../../contexts/AuthContext';
 
 const { width, height } = Dimensions.get('window');
 
 export default function LandingPage() {
-  const handleLoginPress = () => {
-    router.push('/login' as any);
+  const { login, isLoading } = useAuth();
+
+  const handleGoogleLogin = () => {
+    try {
+      log('User initiated Google login from landing page');
+      login(); // This will redirect to Google OAuth
+    } catch (error) {
+      console.error('Login error:', error);
+      // You could show an error toast here
+    }
   };
 
   return (
@@ -60,10 +69,11 @@ export default function LandingPage() {
           />
         </View>
 
-        {/* Login Button */}
+        {/* Google Login Button */}
         <TouchableOpacity
-          onPress={handleLoginPress}
-          className="w-full max-w-sm bg-blue-600 rounded-2xl"
+          onPress={handleGoogleLogin}
+          disabled={isLoading}
+          className={`w-full max-w-sm bg-blue-600 rounded-2xl ${isLoading ? 'opacity-70' : ''}`}
           style={{
             shadowColor: '#000',
             shadowOffset: { width: 0, height: 4 },
@@ -75,7 +85,7 @@ export default function LandingPage() {
           <View className="flex-row items-center justify-center py-4 px-6">
             <Ionicons name="logo-google" size={24} color="white" />
             <Text className="text-white font-semibold text-lg ml-3">
-              Continue with Google
+              {isLoading ? 'Connecting...' : 'Continue with Google'}
             </Text>
           </View>
         </TouchableOpacity>

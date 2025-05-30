@@ -40,7 +40,7 @@ export default {
     },
     extra: {
       // API Configuration
-      apiUrl: process.env.EXPO_PUBLIC_API_URL || "http://localhost:3000",
+      apiUrl: process.env.EXPO_PUBLIC_API_URL || "http://localhost:8001",
       
       // App Information
       appName: process.env.EXPO_PUBLIC_APP_NAME || "Lifafa",

@@ -11,16 +11,73 @@ export interface GmailAuthData {
 }
 
 class AuthApiService {
+  // Initiate Google login by redirecting to the backend auth endpoint
+  initiateGoogleLogin(): void {
+    try {
+      log('Initiating Google login redirect...');
+      const loginUrl = getApiUrl('/auth/login');
+      
+      // For web, redirect directly
+      if (typeof window !== 'undefined') {
+        window.location.href = loginUrl;
+      } else {
+        // For mobile, you'd typically use expo-auth-session or similar
+        logError('Mobile OAuth redirect not implemented yet');
+        throw new Error('Mobile OAuth not implemented yet');
+      }
+    } catch (error) {
+      logError('Error initiating Google login', error);
+      throw error;
+    }
+  }
+
+  // Parse OAuth callback parameters from URL
+  parseOAuthCallback(): GoogleLoginResponse | null {
+    try {
+      if (typeof window === 'undefined') {
+        log('Not in web environment, skipping URL param parsing');
+        return null;
+      }
+
+      const urlParams = new URLSearchParams(window.location.search);
+      const token = urlParams.get('token');
+      const userJson = urlParams.get('user');
+
+      if (!token || !userJson) {
+        log('No token or user found in URL parameters');
+        return null;
+      }
+
+      const user = JSON.parse(decodeURIComponent(userJson)) as UserProfile;
+      
+      log('Successfully parsed OAuth callback', { 
+        userId: user.email,
+        tokenLength: token.length 
+      });
+
+      // Clean up URL parameters
+      const url = new URL(window.location.href);
+      url.searchParams.delete('token');
+      url.searchParams.delete('user');
+      window.history.replaceState({}, document.title, url.toString());
+
+      return { token, user };
+    } catch (error) {
+      logError('Error parsing OAuth callback', error);
+      return null;
+    }
+  }
+
+  // Legacy method for direct API calls (keeping for backward compatibility)
   async googleLogin(): Promise<GoogleLoginResponse> {
     try {
-      log('Attempting Google login...');
+      log('Attempting direct Google login API call...');
       
       const response = await fetch(getApiUrl('/auth/google-login'), {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        // No params needed according to the API spec
       });
 
       if (!response.ok) {
@@ -53,7 +110,6 @@ class AuthApiService {
       }
 
       log('Gmail data fetch completed successfully');
-      // This endpoint stores data in MongoDB and mem0, no return data needed
     } catch (error) {
       logError('Gmail fetch error', error);
       throw error;

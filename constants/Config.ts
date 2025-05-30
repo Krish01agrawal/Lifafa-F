@@ -28,9 +28,14 @@ interface AppConfig {
 const getConfig = (): AppConfig => {
   const extra = Constants.expoConfig?.extra || {};
   
+  // Debug logging to see what we're getting
+  console.log('🔧 Loading configuration from Expo Constants:');
+  console.log('Extra config:', extra);
+  console.log('API URL from extra:', extra.apiUrl);
+  
   return {
     // API Configuration
-    apiUrl: extra.apiUrl || 'http://localhost:3000',
+    apiUrl: extra.apiUrl || 'http://localhost:8001', // Updated fallback to match .env
     apiTimeout: extra.apiTimeout || 10000,
     retryAttempts: extra.retryAttempts || 3,
     
