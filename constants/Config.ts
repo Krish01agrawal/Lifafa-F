@@ -28,14 +28,9 @@ interface AppConfig {
 const getConfig = (): AppConfig => {
   const extra = Constants.expoConfig?.extra || {};
   
-  // Debug logging to see what we're getting
-  console.log('🔧 Loading configuration from Expo Constants:');
-  console.log('Extra config:', extra);
-  console.log('API URL from extra:', extra.apiUrl);
-  
   return {
     // API Configuration
-    apiUrl: extra.apiUrl || 'http://localhost:8001', // Updated fallback to match .env
+    apiUrl: extra.apiUrl || 'http://localhost:8001',
     apiTimeout: extra.apiTimeout || 10000,
     retryAttempts: extra.retryAttempts || 3,
     
@@ -46,13 +41,13 @@ const getConfig = (): AppConfig => {
     // Environment Configuration
     environment: extra.environment || 'development',
     debugMode: extra.debugMode || false,
-    enableLogging: extra.enableLogging || false,
+    enableLogging: extra.enableLogging || true, // Enable by default for now
     
     // OAuth Configuration
     googleClientId: extra.googleClientId || '',
     
     // Feature Flags
-    enableWebSocket: extra.enableWebSocket || false,
+    enableWebSocket: extra.enableWebSocket !== undefined ? extra.enableWebSocket : false,
     enableAnalytics: extra.enableAnalytics || false,
   };
 };
@@ -89,3 +84,4 @@ export const logError = (message: string, error?: any) => {
 
 // Export types for use in other files
 export type { AppConfig };
+ 

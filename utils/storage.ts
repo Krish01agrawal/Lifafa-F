@@ -53,8 +53,8 @@ export const storage = {
       // For SecureStore, we need to manually remove known keys
       // We'll handle this in the auth context
       try {
-        await SecureStore.deleteItemAsync('auth_token');
-        await SecureStore.deleteItemAsync('user_profile');
+        await SecureStore.deleteItemAsync(AUTH_KEYS.TOKEN);
+        await SecureStore.deleteItemAsync(AUTH_KEYS.USER_PROFILE);
       } catch (error) {
         console.warn('SecureStore clear failed, falling back to AsyncStorage:', error);
         await AsyncStorage.clear();
@@ -64,6 +64,6 @@ export const storage = {
 };
 
 export const AUTH_KEYS = {
-  TOKEN: 'auth_token',
-  USER_PROFILE: 'user_profile'
+  TOKEN: 'jwtToken',
+  USER_PROFILE: 'currentUser'
 } as const; 

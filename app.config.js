@@ -55,7 +55,7 @@ export default {
       googleClientId: process.env.EXPO_PUBLIC_GOOGLE_CLIENT_ID || "",
       
       // Feature Flags
-      enableWebSocket: process.env.EXPO_PUBLIC_ENABLE_WEBSOCKET === "true",
+      enableWebSocket: true,
       enableAnalytics: process.env.EXPO_PUBLIC_ENABLE_ANALYTICS === "true",
       
       // API Configuration

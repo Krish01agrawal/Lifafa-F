@@ -15,8 +15,10 @@ interface AuthContextType {
   token: string | null;
   isLoading: boolean;
   isAuthenticated: boolean;
-  login: () => void; // Changed to redirect-based login
+  login: () => void;
   logout: () => Promise<void>;
+  authError: string | null;
+  clearAuthError: () => void;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -25,36 +27,98 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<UserProfile | null>(null);
   const [token, setToken] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [authError, setAuthError] = useState<string | null>(null);
 
   const isAuthenticated = !!user && !!token;
+
+  const clearAuthError = () => {
+    setAuthError(null);
+  };
 
   // Check for existing auth and OAuth callback on app load
   useEffect(() => {
     async function initializeAuth() {
       try {
         setIsLoading(true);
+        log('Starting authentication initialization...');
         
         // First, check if we have OAuth callback parameters
         const oauthResult = authApi.parseOAuthCallback();
         if (oauthResult) {
-          log('Processing OAuth callback');
+          // Check if it's an error response
+          if ('error' in oauthResult) {
+            log('OAuth error detected', { error: oauthResult.error });
+            setAuthError(oauthResult.error);
+            return;
+          }
+          
+          // Success case
+          log('OAuth callback detected, processing...', {
+            tokenPresent: !!oauthResult.token,
+            userEmail: oauthResult.user.email
+          });
           await handleAuthSuccess(oauthResult.token, oauthResult.user);
+          log('OAuth callback processing completed, user should be logged in');
           return;
         }
 
-        // Otherwise, check for existing stored auth
-        const [storedToken, storedUser] = await Promise.all([
+        // Check for existing stored auth using the new keys
+        log('No OAuth callback, checking localStorage...', {
+          tokenKey: AUTH_KEYS.TOKEN,
+          userKey: AUTH_KEYS.USER_PROFILE
+        });
+        
+        const [storedToken, storedCurrentUser] = await Promise.all([
           storage.getItem(AUTH_KEYS.TOKEN),
           storage.getItem(AUTH_KEYS.USER_PROFILE)
         ]);
 
-        if (storedToken && storedUser) {
-          const parsedUser = JSON.parse(storedUser);
+        log('localStorage check results', {
+          tokenFound: !!storedToken,
+          userFound: !!storedCurrentUser,
+          tokenValue: storedToken ? 'PRESENT' : 'NULL',
+          userValue: storedCurrentUser ? 'PRESENT' : 'NULL'
+        });
+
+        if (storedToken && storedCurrentUser) {
+          // Handle currentUser as email string or JSON object
+          let parsedUser: UserProfile;
+          
+          try {
+            // Try parsing as JSON first (new format)
+            parsedUser = JSON.parse(storedCurrentUser);
+            log('Parsed user from JSON format', { email: parsedUser.email });
+          } catch (jsonError) {
+            // If not JSON, treat as email string (legacy format)
+            log('JSON parsing failed, treating as email string', { userString: storedCurrentUser });
+            
+            if (storedCurrentUser.includes('@')) {
+              parsedUser = {
+                id: storedCurrentUser,
+                email: storedCurrentUser,
+                name: storedCurrentUser.split('@')[0],
+                avatar: undefined
+              };
+            } else {
+              // Fallback if not an email
+              parsedUser = {
+                id: storedCurrentUser,
+                email: `${storedCurrentUser}@example.com`,
+                name: storedCurrentUser,
+                avatar: undefined
+              };
+            }
+            log('Created user object from email string', { email: parsedUser.email });
+          }
+          
           setToken(storedToken);
           setUser(parsedUser);
-          log('Restored authentication from storage', { userId: parsedUser.email });
+          log('Authentication restored from localStorage', { 
+            userId: parsedUser.email,
+            tokenPresent: !!storedToken 
+          });
         } else {
-          log('No existing authentication found');
+          log('No existing authentication found in localStorage');
         }
       } catch (error) {
         logError('Error initializing auth', error);
@@ -62,6 +126,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         await clearAuth();
       } finally {
         setIsLoading(false);
+        log('Authentication initialization completed');
       }
     }
 
@@ -71,16 +136,26 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   // Handle successful authentication
   const handleAuthSuccess = async (authToken: string, userProfile: UserProfile) => {
     try {
+      log('handleAuthSuccess called', { 
+        tokenPresent: !!authToken, 
+        userEmail: userProfile.email,
+        userName: userProfile.name 
+      });
+      
       setToken(authToken);
       setUser(userProfile);
 
-      // Store authentication data
+      // Store authentication data in localStorage
+      // Store currentUser as JSON object and jwtToken as string
       await Promise.all([
         storage.setItem(AUTH_KEYS.TOKEN, authToken),
-        storage.setItem(AUTH_KEYS.USER_PROFILE, JSON.stringify(userProfile))
+        storage.setItem(AUTH_KEYS.USER_PROFILE, JSON.stringify(userProfile)) // Store full user object as JSON
       ]);
 
-      log('Authentication successful', { userId: userProfile.email });
+      log('Authentication data stored successfully', { 
+        userId: userProfile.email,
+        storedKeys: [AUTH_KEYS.TOKEN, AUTH_KEYS.USER_PROFILE]
+      });
     } catch (error) {
       logError('Error storing auth data', error);
       throw error;
@@ -135,6 +210,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     isAuthenticated,
     login,
     logout,
+    authError,
+    clearAuthError,
   };
 
   return (

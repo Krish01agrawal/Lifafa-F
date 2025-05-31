@@ -32,27 +32,88 @@ class AuthApiService {
   }
 
   // Parse OAuth callback parameters from URL
-  parseOAuthCallback(): GoogleLoginResponse | null {
+  parseOAuthCallback(): GoogleLoginResponse | { error: string } | null {
     try {
       if (typeof window === 'undefined') {
-        log('Not in web environment, skipping URL param parsing');
+        log('parseOAuthCallback: Not in browser environment');
         return null;
       }
+
+      log('parseOAuthCallback: Checking URL parameters...', {
+        currentUrl: window.location.href,
+        search: window.location.search
+      });
 
       const urlParams = new URLSearchParams(window.location.search);
       const token = urlParams.get('token');
-      const userJson = urlParams.get('user');
+      const userParam = urlParams.get('user');
+      const error = urlParams.get('error');
 
-      if (!token || !userJson) {
-        log('No token or user found in URL parameters');
+      log('parseOAuthCallback: Extracted parameters', {
+        tokenPresent: !!token,
+        tokenValue: token ? 'PRESENT' : 'NULL',
+        userPresent: !!userParam,
+        userValue: userParam ? userParam : 'NULL',
+        errorPresent: !!error,
+        errorValue: error ? error : 'NULL'
+      });
+
+      // Check for error first
+      if (error) {
+        log('parseOAuthCallback: Error detected in URL parameters', { error });
+        
+        // Clean up URL parameters
+        const url = new URL(window.location.href);
+        url.searchParams.delete('error');
+        window.history.replaceState({}, document.title, url.toString());
+        
+        return { error };
+      }
+
+      if (!token || !userParam) {
+        log('parseOAuthCallback: Missing required parameters, not an OAuth callback');
         return null;
       }
 
-      const user = JSON.parse(decodeURIComponent(userJson)) as UserProfile;
+      // Try to parse user data - handle different formats
+      let user: UserProfile;
+      try {
+        // Try parsing as JSON first
+        user = JSON.parse(decodeURIComponent(userParam)) as UserProfile;
+        log('parseOAuthCallback: Successfully parsed user as JSON', { 
+          email: user.email,
+          name: user.name 
+        });
+      } catch (jsonError) {
+        // If JSON parsing fails, try to construct user object from simple string
+        log('parseOAuthCallback: JSON parsing failed, attempting fallback user construction');
+        
+        // Check if it's a simple email or name
+        const userString = decodeURIComponent(userParam);
+        if (userString.includes('@')) {
+          // Looks like an email
+          user = {
+            id: userString,
+            email: userString,
+            name: userString.split('@')[0],
+            avatar: undefined
+          };
+          log('parseOAuthCallback: Created user from email string', { email: user.email });
+        } else {
+          // Treat as name
+          user = {
+            id: userString,
+            email: `${userString}@example.com`, // Fallback email
+            name: userString,
+            avatar: undefined
+          };
+          log('parseOAuthCallback: Created user from name string', { name: user.name });
+        }
+      }
       
-      log('Successfully parsed OAuth callback', { 
+      log('parseOAuthCallback: Successfully parsed OAuth callback', { 
         userId: user.email,
-        tokenLength: token.length 
+        tokenPresent: !!token 
       });
 
       // Clean up URL parameters
@@ -60,10 +121,14 @@ class AuthApiService {
       url.searchParams.delete('token');
       url.searchParams.delete('user');
       window.history.replaceState({}, document.title, url.toString());
+      
+      log('parseOAuthCallback: Cleaned up URL parameters', {
+        newUrl: url.toString()
+      });
 
       return { token, user };
     } catch (error) {
-      logError('Error parsing OAuth callback', error);
+      logError('parseOAuthCallback: Error parsing OAuth callback', error);
       return null;
     }
   }

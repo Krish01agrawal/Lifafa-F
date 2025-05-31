@@ -16,15 +16,16 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { CodeBlock } from '../components/chat/CodeBlock';
-import { TypingIndicator } from '../components/chat/TypingIndicator';
+import { ConnectionStatus } from '../components/ui/ConnectionStatus';
+import { Config } from '../constants/Config';
 import { useAuth } from '../contexts/AuthContext';
 import {
     useChat,
-    useChats,
+    useChatHistory,
     useCreateChat,
     useDeleteChat,
-    useGetAIResponse,
     useSendMessage,
+    useTyping
 } from '../hooks/useChatQueries';
 import { Chat, Message } from '../services/chatApi';
 
@@ -203,12 +204,12 @@ export default function ChatScreen() {
   const flatListRef = useRef<FlatList>(null);
 
   const { user, logout } = useAuth();
-  const { data: chats = [], isLoading: chatsLoading } = useChats();
+  const { data: chats = [], isLoading: chatsLoading } = useChatHistory();
   const { data: currentChat, isLoading: chatLoading } = useChat(chatId || '');
   const createChatMutation = useCreateChat();
   const sendMessageMutation = useSendMessage();
-  const getAIResponseMutation = useGetAIResponse();
   const deleteChatMutation = useDeleteChat();
+  const { typingUsers, startTyping, stopTyping, getTypingDisplay } = useTyping(chatId || null);
 
   // Ensure chats is properly typed
   const typedChats = (chats as Chat[]) || [];
@@ -227,7 +228,7 @@ export default function ChatScreen() {
         flatListRef.current?.scrollToEnd({ animated: true });
       }, 100);
     }
-  }, [currentChat?.messages.length, getAIResponseMutation.isPending]);
+  }, [currentChat?.messages.length]);
 
   const handleSendMessage = async () => {
     if (!inputText.trim()) return;
@@ -244,11 +245,7 @@ export default function ChatScreen() {
         activeChatId = newChatResult.id;
         router.replace(`/?chatId=${activeChatId}`);
         
-        // Get AI response for new chat
-        await getAIResponseMutation.mutateAsync({
-          chatId: activeChatId,
-          userMessage: messageContent,
-        });
+        // AI response will come automatically via WebSocket
       } else {
         // Send message to existing chat
         await sendMessageMutation.mutateAsync({
@@ -256,11 +253,7 @@ export default function ChatScreen() {
           content: messageContent,
         });
 
-        // Get AI response
-        await getAIResponseMutation.mutateAsync({
-          chatId: activeChatId,
-          userMessage: messageContent,
-        });
+        // AI response will come automatically via WebSocket
       }
     } catch (error) {
       console.error('Error sending message:', error);
@@ -312,8 +305,8 @@ export default function ChatScreen() {
         <View className="p-4 mx-2 mt-2 mb-2 bg-gray-900 rounded-lg">
           <View className="flex-row items-center">
             <Image
-              source={{ uri: user.profilePicUrl }}
-              className="w-12 h-12 rounded-full mr-3"
+              className="w-8 h-8 rounded-full"
+              source={{ uri: user.avatar }}
             />
             <View className="flex-1">
               <Text className="text-white font-medium text-base" numberOfLines={1}>
@@ -401,6 +394,31 @@ export default function ChatScreen() {
 
   const renderChatArea = () => (
     <View className="flex-1 bg-black">
+      {/* Connection Status */}
+      <ConnectionStatus />
+      
+      {/* Debug Info (Development Only) */}
+      {__DEV__ && (
+        <View className="mx-2 mb-2 p-3 bg-gray-900 rounded-lg border border-gray-700">
+          <Text className="text-yellow-400 text-sm font-bold mb-2">🛠️ DEBUG INFO</Text>
+          <Text className="text-gray-300 text-xs">
+            WebSocket Enabled: {Config.enableWebSocket ? '✅ Yes' : '❌ No'}
+          </Text>
+          <Text className="text-gray-300 text-xs">
+            API URL: {Config.apiUrl}
+          </Text>
+          <Text className="text-gray-300 text-xs">
+            Expected WebSocket URL: {Config.apiUrl.replace(/^https?:\/\//, 'ws://')}/ws/chat
+          </Text>
+          <Text className="text-gray-300 text-xs">
+            Environment: {Config.environment}
+          </Text>
+          <Text className="text-gray-300 text-xs">
+            Auth Token: {user ? '✅ Present' : '❌ Missing'}
+          </Text>
+        </View>
+      )}
+      
       {/* Header */}
       <View className="mx-2 mt-2 mb-4 p-4 bg-black rounded-lg flex-row items-center">
         {(isTablet && sidebarCollapsed) && (
@@ -430,13 +448,23 @@ export default function ChatScreen() {
           <View className="flex-1 justify-center items-center">
             <ActivityIndicator size="large" color="#3B82F6" />
           </View>
-        ) : currentChat?.messages.length || getAIResponseMutation.isPending ? (
+        ) : currentChat?.messages.length ? (
           <FlatList
             ref={flatListRef}
             data={currentChat?.messages || []}
             keyExtractor={(item) => item.id}
             renderItem={({ item }) => <MessageItem message={item} />}
-            ListFooterComponent={getAIResponseMutation.isPending ? <TypingIndicator /> : null}
+            ListFooterComponent={() => (
+              <View>
+                {typingUsers.length > 0 && (
+                  <View className="mb-4">
+                    <Text className="text-gray-400 text-sm italic ml-2">
+                      {getTypingDisplay()}
+                    </Text>
+                  </View>
+                )}
+              </View>
+            )}
             contentContainerStyle={{ padding: 16 }}
             showsVerticalScrollIndicator={false}
           />
@@ -460,7 +488,16 @@ export default function ChatScreen() {
         <View className="mx-2 mb-2 p-4 bg-black rounded-lg flex-row items-end">
           <TextInput
             value={inputText}
-            onChangeText={setInputText}
+            onChangeText={(text) => {
+              setInputText(text);
+              // Start typing indicator when user types
+              if (text.length > 0) {
+                startTyping();
+              } else {
+                stopTyping();
+              }
+            }}
+            onBlur={stopTyping} // Stop typing when user leaves input
             placeholder="Type a message..."
             placeholderTextColor="#6B7280"
             multiline
@@ -469,15 +506,18 @@ export default function ChatScreen() {
             style={{ textAlignVertical: 'top' }}
           />
           <TouchableOpacity
-            onPress={handleSendMessage}
-            disabled={!inputText.trim() || sendMessageMutation.isPending || getAIResponseMutation.isPending}
+            onPress={async () => {
+              stopTyping(); // Stop typing when sending
+              await handleSendMessage();
+            }}
+            disabled={!inputText.trim() || sendMessageMutation.isPending}
             className={`p-3 rounded-full ${
-              inputText.trim() && !sendMessageMutation.isPending && !getAIResponseMutation.isPending
+              inputText.trim() && !sendMessageMutation.isPending
                 ? 'bg-blue-600'
                 : 'bg-gray-600'
             }`}
           >
-            {sendMessageMutation.isPending || getAIResponseMutation.isPending ? (
+            {sendMessageMutation.isPending ? (
               <ActivityIndicator size="small" color="white" />
             ) : (
               <Ionicons name="send" size={20} color="white" />

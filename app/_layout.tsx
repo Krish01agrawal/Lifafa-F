@@ -7,6 +7,7 @@ import { StatusBar } from 'expo-status-bar';
 import React, { useEffect } from 'react';
 import { ActivityIndicator, View } from 'react-native';
 import 'react-native-reanimated';
+import { ToastProvider, useToast } from '../components/ui/ToastContainer';
 import { AuthProvider, useAuth } from '../contexts/AuthContext';
 import '../global.css';
 
@@ -23,7 +24,37 @@ const queryClient = new QueryClient({
 });
 
 function AuthGuard({ children }: { children: React.ReactNode }) {
-  const { isAuthenticated, isLoading } = useAuth();
+  const { isAuthenticated, isLoading, authError, clearAuthError } = useAuth();
+  const { showError } = useToast();
+
+  // Handle auth errors with toast notifications
+  useEffect(() => {
+    if (authError) {
+      let errorMessage = 'Authentication failed';
+      
+      // Parse common OAuth errors
+      if (authError.includes('access_denied')) {
+        errorMessage = 'Access denied. Please try again.';
+      } else if (authError.includes('invalid_request')) {
+        errorMessage = 'Invalid request. Please try again.';
+      } else if (authError.includes('unauthorized_client')) {
+        errorMessage = 'Unauthorized client. Please contact support.';
+      } else if (authError.includes('unsupported_response_type')) {
+        errorMessage = 'Unsupported response type. Please contact support.';
+      } else if (authError.includes('invalid_scope')) {
+        errorMessage = 'Invalid scope. Please contact support.';
+      } else if (authError.includes('server_error')) {
+        errorMessage = 'Server error. Please try again later.';
+      } else if (authError.includes('temporarily_unavailable')) {
+        errorMessage = 'Service temporarily unavailable. Please try again later.';
+      } else {
+        errorMessage = `Authentication error: ${authError}`;
+      }
+      
+      showError('Login Failed', errorMessage);
+      clearAuthError();
+    }
+  }, [authError, showError, clearAuthError]);
 
   useEffect(() => {
     if (!isLoading) {
@@ -64,15 +95,17 @@ export default function RootLayout() {
   }
 
   return (
-    <AuthProvider>
-      <QueryClientProvider client={queryClient}>
-        <ThemeProvider value={DarkTheme}>
-          <AuthGuard>
-            <Slot />
-          </AuthGuard>
-          <StatusBar style="light" />
-        </ThemeProvider>
-      </QueryClientProvider>
-    </AuthProvider>
+    <ToastProvider>
+      <AuthProvider>
+        <QueryClientProvider client={queryClient}>
+          <ThemeProvider value={DarkTheme}>
+            <AuthGuard>
+              <Slot />
+            </AuthGuard>
+            <StatusBar style="light" />
+          </ThemeProvider>
+        </QueryClientProvider>
+      </AuthProvider>
+    </ToastProvider>
   );
 }
