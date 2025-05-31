@@ -39,6 +39,7 @@ class ChatWebSocketService {
   private listeners: Map<string, Set<(data: any) => void>> = new Map();
   private messageQueue: WebSocketMessage[] = [];
   private currentChatId: string | null = null;
+  private isServerReady = false; // Track if server sent welcome message
 
   constructor() {
     this.setupNetworkListeners();
@@ -104,6 +105,7 @@ class ChatWebSocketService {
     log('Disconnecting WebSocket');
     this.reconnectAttempts = 0;
     this.isConnecting = false;
+    this.isServerReady = false; // Reset server ready state on disconnect
     
     if (this.ws) {
       // Set a flag to prevent reconnection on normal disconnect
@@ -117,29 +119,38 @@ class ChatWebSocketService {
   // Join a specific chat room
   joinChat(chatId: string): void {
     this.currentChatId = chatId;
-    this.sendMessage({
-      type: 'join_chat',
-      payload: { chatId },
-      chatId
-    });
-    log('Joined chat', { chatId });
+    
+    // If WebSocket is connected and server is ready, send auth with chatId
+    if (this.ws && this.ws.readyState === WebSocket.OPEN && this.isServerReady) {
+      const authMessage = {
+        jwt_token: this.token,
+        chatId: chatId
+      };
+      this.ws.send(JSON.stringify(authMessage));
+      log('Sent auth with chatId for chat join', { chatId });
+    } else {
+      // If not ready, connect with this chatId
+      log('WebSocket not ready, connecting with chatId', { chatId, isServerReady: this.isServerReady });
+      this.connect();
+    }
   }
 
   // Leave current chat room
   leaveChat(): void {
     if (this.currentChatId) {
-      this.sendMessage({
-        type: 'leave_chat',
-        payload: { chatId: this.currentChatId },
-        chatId: this.currentChatId
-      });
       log('Left chat', { chatId: this.currentChatId });
       this.currentChatId = null;
+      this.isServerReady = false; // Reset server ready state when leaving chat
     }
   }
 
   // Send a simple message (matching vanilla JS format)
   sendSimpleMessage(message: string): void {
+    if (!this.isServerReady) {
+      logError('Cannot send message: Server not ready (no welcome message received)');
+      return;
+    }
+    
     if (this.ws && this.ws.readyState === WebSocket.OPEN) {
       // Include chat ID in the message so backend can associate responses correctly
       const payload = {
@@ -201,7 +212,7 @@ class ChatWebSocketService {
     if (this.ws) {
       switch (this.ws.readyState) {
         case WebSocket.OPEN:
-          return 'connected';
+          return this.isServerReady ? 'connected' : 'connecting'; // Only "connected" when server is ready
         case WebSocket.CONNECTING:
           return 'connecting';
         case WebSocket.CLOSED:
@@ -214,38 +225,83 @@ class ChatWebSocketService {
     return 'disconnected';
   }
 
+  // Check if ready to send messages
+  isReadyToSend(): boolean {
+    return this.ws?.readyState === WebSocket.OPEN && this.isServerReady;
+  }
+
   private setupWebSocketListeners(): void {
     if (!this.ws) return;
 
     this.ws.onopen = () => {
-      log('WebSocket connected successfully');
+      log('WebSocket connected, waiting for server welcome message');
       this.isConnecting = false;
       this.reconnectAttempts = 0;
+      this.isServerReady = false; // Reset ready state on new connection
       
-      // Send authentication token after connection (matching vanilla JS pattern)
+      // Send authentication token with chatId after connection
       if (this.token) {
-        this.ws!.send(JSON.stringify({ jwt_token: this.token }));
-        log('Authentication token sent');
+        const authMessage = {
+          jwt_token: this.token,
+          chatId: this.currentChatId || 'default'
+        };
+        this.ws!.send(JSON.stringify(authMessage));
+        log('Authentication token and chatId sent', { chatId: this.currentChatId });
       }
       
-      // Send queued messages
-      this.flushMessageQueue();
-      
-      // Emit connected event
-      this.emit('connected', { timestamp: new Date().toISOString() });
+      // Don't emit 'connected' yet - wait for welcome message
     };
 
     this.ws.onmessage = (event) => {
       try {
         log('WebSocket raw message received', { 
           data: event.data, 
+          dataType: typeof event.data,
           currentChatId: this.currentChatId,
-          currentURL: typeof window !== 'undefined' ? window.location.href : 'N/A'
+          isServerReady: this.isServerReady
         });
         
         const data = JSON.parse(event.data);
         
-        // Handle the vanilla JS expected format: { reply: ["response"], error?: boolean }
+        // Check for welcome message first - it comes in the reply array
+        const messageText = data?.reply?.[0] || '';
+        const isWelcomeMessage = messageText && (
+          messageText.includes('Connected to chat') || 
+          messageText.includes('connected') || 
+          messageText.includes('welcome') ||
+          messageText.includes('ready')
+        );
+        
+        if (isWelcomeMessage) {
+          log('Server welcome message detected', { 
+            message: messageText,
+            chatId: data.chatId,
+            fullData: data
+          });
+          this.isServerReady = true;
+          
+          // Update chatId from server response
+          if (data.chatId) {
+            log('Server provided chatId', { 
+              oldChatId: this.currentChatId, 
+              newChatId: data.chatId 
+            });
+            this.currentChatId = data.chatId;
+          }
+          
+          // Now emit connected event with server ready status
+          this.emit('connected', { 
+            timestamp: new Date().toISOString(),
+            isServerReady: true,
+            chatId: this.currentChatId
+          });
+          
+          // Send queued messages now that server is ready
+          this.flushMessageQueue();
+          return;
+        }
+        
+        // Handle regular AI responses: { reply: ["response"], error?: boolean }
         if (data && (data.reply || data.error)) {
           let messageContent = "";
           
@@ -312,6 +368,7 @@ class ChatWebSocketService {
     this.ws.onclose = (event) => {
       log('WebSocket connection closed', { code: event.code, reason: event.reason });
       this.isConnecting = false;
+      this.isServerReady = false; // Reset server ready state on close
       
       if (event.code !== 1000) { // Not a normal closure
         this.scheduleReconnect();
@@ -329,6 +386,7 @@ class ChatWebSocketService {
         isConnecting: this.isConnecting
       });
       this.isConnecting = false;
+      this.isServerReady = false; // Reset server ready state on error
       this.emit('error', { 
         message: 'WebSocket connection failed',
         originalError: error,

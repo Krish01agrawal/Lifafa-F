@@ -25,6 +25,7 @@ import {
     useSendMessage,
     useTyping
 } from '../hooks/useChatQueries';
+import { useWebSocketConnection } from '../hooks/useWebSocket';
 import { Chat, Message } from '../services/chatApi';
 
 const { width } = Dimensions.get('window');
@@ -204,6 +205,7 @@ export default function ChatScreen() {
   const { user, logout } = useAuth();
   const { data: chats = [], isLoading: chatsLoading } = useChatHistory();
   const { data: currentChat, isLoading: chatLoading } = useChat(chatId || '');
+  const { status, isReadyToSend, isServerReady } = useWebSocketConnection();
   const createChatMutation = useCreateChat();
   const sendMessageMutation = useSendMessage();
   const deleteChatMutation = useDeleteChat();
@@ -227,6 +229,22 @@ export default function ChatScreen() {
       }, 100);
     }
   }, [currentChat?.messages.length]);
+
+  // Get dynamic placeholder text based on WebSocket status
+  const getPlaceholderText = () => {
+    if (!isReadyToSend) {
+      switch (status) {
+        case 'connecting':
+          return 'Connecting...';
+        case 'disconnected':
+        case 'error':
+          return 'Connection lost...';
+        default:
+          return isServerReady ? 'Type a message...' : 'Waiting for server...';
+      }
+    }
+    return 'Type a message...';
+  };
 
   const handleSendMessage = async () => {
     if (!inputText.trim()) return;
@@ -463,19 +481,22 @@ export default function ChatScreen() {
             value={inputText}
             onChangeText={(text) => {
               setInputText(text);
-              // Start typing indicator when user types
-              if (text.length > 0) {
+              // Start typing indicator when user types (only if ready to send)
+              if (text.length > 0 && isReadyToSend) {
                 startTyping();
               } else {
                 stopTyping();
               }
             }}
             onBlur={stopTyping} // Stop typing when user leaves input
-            placeholder="Type a message..."
+            placeholder={getPlaceholderText()}
             placeholderTextColor="#6B7280"
             multiline
             maxLength={1000}
-            className="flex-1 bg-gray-800 text-white p-3 rounded-2xl mr-3 max-h-32"
+            editable={isReadyToSend} // Disable input when not ready
+            className={`flex-1 p-3 rounded-2xl mr-3 max-h-32 ${
+              isReadyToSend ? 'bg-gray-800 text-white' : 'bg-gray-700 text-gray-400'
+            }`}
             style={{ textAlignVertical: 'top' }}
           />
           <TouchableOpacity
@@ -483,9 +504,9 @@ export default function ChatScreen() {
               stopTyping(); // Stop typing when sending
               await handleSendMessage();
             }}
-            disabled={!inputText.trim() || sendMessageMutation.isPending}
+            disabled={!inputText.trim() || sendMessageMutation.isPending || !isReadyToSend}
             className={`p-3 rounded-full ${
-              inputText.trim() && !sendMessageMutation.isPending
+              inputText.trim() && !sendMessageMutation.isPending && isReadyToSend
                 ? 'bg-blue-600'
                 : 'bg-gray-600'
             }`}
@@ -493,7 +514,11 @@ export default function ChatScreen() {
             {sendMessageMutation.isPending ? (
               <ActivityIndicator size="small" color="white" />
             ) : (
-              <Ionicons name="send" size={20} color="white" />
+              <Ionicons 
+                name="send" 
+                size={20} 
+                color={isReadyToSend && inputText.trim() ? "white" : "#9CA3AF"} 
+              />
             )}
           </TouchableOpacity>
         </View>

@@ -51,12 +51,12 @@ export function useChat(chatId: string) {
 // Create a new chat
 export function useCreateChat() {
   const queryClient = useQueryClient();
-  const { isConnected } = useWebSocketConnection();
+  const { isReadyToSend } = useWebSocketConnection();
   
   return useMutation({
     mutationFn: async (message: string) => {
-      if (!isConnected) {
-        throw new Error('WebSocket not connected. Please wait for connection.');
+      if (!isReadyToSend) {
+        throw new Error('WebSocket not ready. Please wait for server connection.');
       }
       
       // Create a chat using only WebSocket
@@ -117,12 +117,12 @@ export function useCreateChat() {
 // Send a message
 export function useSendMessage() {
   const queryClient = useQueryClient();
-  const { isConnected } = useWebSocketConnection();
+  const { isReadyToSend } = useWebSocketConnection();
   
   return useMutation({
     mutationFn: async ({ chatId, content }: { chatId: string; content: string }) => {
-      if (!isConnected) {
-        throw new Error('WebSocket not connected. Please wait for connection.');
+      if (!isReadyToSend) {
+        throw new Error('WebSocket not ready. Please wait for server connection.');
       }
 
       // Create optimistic message using the correct interface
@@ -277,7 +277,7 @@ export function useTyping(chatId: string | null) {
 
 // NEW: Connection status for UI display
 export function useConnectionStatus() {
-  const { status, reconnectAttempts, error, reconnect, isConnected } = useWebSocketConnection();
+  const { status, reconnectAttempts, error, reconnect, isConnected, isReadyToSend, isServerReady } = useWebSocketConnection();
   
   return {
     status,
@@ -285,15 +285,17 @@ export function useConnectionStatus() {
     error,
     reconnect,
     isConnected,
+    isReadyToSend,
+    isServerReady,
     // Helper to get user-friendly status message
     getStatusMessage: () => {
       switch (status) {
         case 'connecting':
           return reconnectAttempts > 0 
             ? `Reconnecting... (${reconnectAttempts}/5)` 
-            : 'Connecting...';
+            : 'Connecting to server...';
         case 'connected':
-          return 'Connected';
+          return isServerReady ? 'Connected' : 'Waiting for server welcome...';
         case 'disconnected':
           return 'Offline';
         case 'error':
@@ -303,11 +305,13 @@ export function useConnectionStatus() {
       }
     },
     // Helper to determine if we should show status indicator
-    shouldShowStatus: () => status !== 'connected',
+    shouldShowStatus: () => status !== 'connected' || !isServerReady,
     // Helper to check if actively trying to reconnect
     isReconnecting: () => status === 'connecting' && reconnectAttempts > 0,
     // Helper to check if max attempts reached
-    hasMaxedRetries: () => status === 'error' && reconnectAttempts >= 5
+    hasMaxedRetries: () => status === 'error' && reconnectAttempts >= 5,
+    // Helper to get connection readiness for send button
+    canSendMessages: () => isReadyToSend
   };
 }
 

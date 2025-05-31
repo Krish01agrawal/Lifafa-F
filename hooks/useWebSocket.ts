@@ -8,6 +8,7 @@ export interface WebSocketStatus {
   status: 'connecting' | 'connected' | 'disconnected' | 'error';
   reconnectAttempts: number;
   error?: any;
+  isServerReady?: boolean; // Track if server sent welcome message
 }
 
 // Hook for WebSocket connection management
@@ -16,7 +17,8 @@ export function useWebSocketConnection() {
   const queryClient = useQueryClient();
   const [status, setStatus] = useState<WebSocketStatus>({
     status: 'disconnected',
-    reconnectAttempts: 0
+    reconnectAttempts: 0,
+    isServerReady: false
   });
 
   useEffect(() => {
@@ -26,16 +28,22 @@ export function useWebSocketConnection() {
       chatWebSocket.initialize(queryClient, token);
       
       // Set up event listeners
-      const handleConnected = () => {
-        setStatus(prev => ({ ...prev, status: 'connected', reconnectAttempts: 0, error: undefined }));
+      const handleConnected = (data: { isServerReady?: boolean; chatId?: string }) => {
+        setStatus(prev => ({ 
+          ...prev, 
+          status: 'connected', 
+          reconnectAttempts: 0, 
+          error: undefined,
+          isServerReady: data.isServerReady || false
+        }));
       };
 
       const handleDisconnected = () => {
-        setStatus(prev => ({ ...prev, status: 'disconnected' }));
+        setStatus(prev => ({ ...prev, status: 'disconnected', isServerReady: false }));
       };
 
       const handleError = (error: any) => {
-        setStatus(prev => ({ ...prev, status: 'error', error }));
+        setStatus(prev => ({ ...prev, status: 'error', error, isServerReady: false }));
       };
 
       const handleMaxReconnectAttempts = (data: { attempts: number }) => {
@@ -43,7 +51,8 @@ export function useWebSocketConnection() {
           ...prev, 
           status: 'error', 
           reconnectAttempts: data.attempts,
-          error: 'Max reconnection attempts reached'
+          error: 'Max reconnection attempts reached',
+          isServerReady: false
         }));
       };
 
@@ -53,7 +62,8 @@ export function useWebSocketConnection() {
           ...prev, 
           status: 'connecting',
           reconnectAttempts: data.attempt,
-          error: undefined // Clear previous errors when attempting to reconnect
+          error: undefined, // Clear previous errors when attempting to reconnect
+          isServerReady: false
         }));
       };
 
@@ -64,7 +74,7 @@ export function useWebSocketConnection() {
       chatWebSocket.addEventListener('reconnect_attempt', handleReconnectAttempt);
 
       // Connect to WebSocket
-      setStatus(prev => ({ ...prev, status: 'connecting', reconnectAttempts: 0 }));
+      setStatus(prev => ({ ...prev, status: 'connecting', reconnectAttempts: 0, isServerReady: false }));
       chatWebSocket.connect();
 
       // Cleanup on unmount or auth change
@@ -82,14 +92,15 @@ export function useWebSocketConnection() {
       setStatus({ 
         status: 'disconnected', 
         reconnectAttempts: 0,
-        error: !Config.enableWebSocket ? 'WebSocket disabled in config' : undefined
+        error: !Config.enableWebSocket ? 'WebSocket disabled in config' : undefined,
+        isServerReady: false
       });
     }
   }, [isAuthenticated, token, queryClient]);
 
   const reconnect = useCallback(() => {
     if (isAuthenticated && token && Config.enableWebSocket) {
-      setStatus(prev => ({ ...prev, status: 'connecting', reconnectAttempts: 0 }));
+      setStatus(prev => ({ ...prev, status: 'connecting', reconnectAttempts: 0, isServerReady: false }));
       chatWebSocket.connect();
     }
   }, [isAuthenticated, token]);
@@ -98,8 +109,10 @@ export function useWebSocketConnection() {
     status: status.status,
     reconnectAttempts: status.reconnectAttempts,
     error: status.error,
+    isServerReady: status.isServerReady,
     reconnect,
     isConnected: status.status === 'connected',
+    isReadyToSend: status.status === 'connected' && status.isServerReady,
     isEnabled: Config.enableWebSocket
   };
 }
