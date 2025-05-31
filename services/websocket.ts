@@ -141,9 +141,18 @@ class ChatWebSocketService {
   // Send a simple message (matching vanilla JS format)
   sendSimpleMessage(message: string): void {
     if (this.ws && this.ws.readyState === WebSocket.OPEN) {
-      // Use the same format as working vanilla JS
-      this.ws.send(JSON.stringify({ message }));
-      log('Simple message sent via WebSocket', { messagePreview: message.substring(0, 50) });
+      // Include chat ID in the message so backend can associate responses correctly
+      const payload = {
+        message: message,
+        chatId: this.currentChatId || 'default'
+      };
+      
+      this.ws.send(JSON.stringify(payload));
+      log('Simple message sent via WebSocket', { 
+        messagePreview: message.substring(0, 50),
+        chatId: this.currentChatId,
+        payload: payload
+      });
     } else {
       logError('Cannot send message: WebSocket not connected');
     }
@@ -228,7 +237,11 @@ class ChatWebSocketService {
 
     this.ws.onmessage = (event) => {
       try {
-        log('WebSocket raw message received', { data: event.data });
+        log('WebSocket raw message received', { 
+          data: event.data, 
+          currentChatId: this.currentChatId,
+          currentURL: typeof window !== 'undefined' ? window.location.href : 'N/A'
+        });
         
         const data = JSON.parse(event.data);
         
@@ -242,10 +255,27 @@ class ChatWebSocketService {
           } else if (data.reply && Array.isArray(data.reply) && data.reply.length > 0) {
             messageContent = data.reply[0];
             
+            // Get the chat ID from the response first, then fall back to URL/current chat ID
+            let activeChatId = data.chatId || this.currentChatId;
+            
+            // If still no chat ID, try to get it from the current URL
+            if (!activeChatId && typeof window !== 'undefined' && window.location.search) {
+              const urlParams = new URLSearchParams(window.location.search);
+              const urlChatId = urlParams.get('chatId');
+              if (urlChatId) {
+                activeChatId = urlChatId;
+              }
+            }
+            
+            // Final fallback to default
+            if (!activeChatId) {
+              activeChatId = 'default';
+            }
+            
             // Create a message object that matches our chat structure
             const message: ChatMessage = {
               id: Date.now().toString(),
-              chatId: this.currentChatId || 'default',
+              chatId: activeChatId,
               content: messageContent,
               sender: {
                 id: 'assistant',
@@ -255,6 +285,15 @@ class ChatWebSocketService {
               timestamp: new Date().toISOString(),
               type: 'assistant' as const
             };
+            
+            log('Processing AI response message', { 
+              messageId: message.id,
+              chatId: message.chatId,
+              currentChatId: this.currentChatId,
+              responseChatId: data.chatId,
+              urlChatId: typeof window !== 'undefined' ? new URLSearchParams(window.location.search).get('chatId') : null,
+              contentPreview: messageContent.substring(0, 100)
+            });
             
             this.handleIncomingMessage(message);
           } else {

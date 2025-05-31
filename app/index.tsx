@@ -16,8 +16,6 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { CodeBlock } from '../components/chat/CodeBlock';
-import { ConnectionStatus } from '../components/ui/ConnectionStatus';
-import { Config } from '../constants/Config';
 import { useAuth } from '../contexts/AuthContext';
 import {
     useChat,
@@ -394,31 +392,6 @@ export default function ChatScreen() {
 
   const renderChatArea = () => (
     <View className="flex-1 bg-black">
-      {/* Connection Status */}
-      <ConnectionStatus />
-      
-      {/* Debug Info (Development Only) */}
-      {__DEV__ && (
-        <View className="mx-2 mb-2 p-3 bg-gray-900 rounded-lg border border-gray-700">
-          <Text className="text-yellow-400 text-sm font-bold mb-2">🛠️ DEBUG INFO</Text>
-          <Text className="text-gray-300 text-xs">
-            WebSocket Enabled: {Config.enableWebSocket ? '✅ Yes' : '❌ No'}
-          </Text>
-          <Text className="text-gray-300 text-xs">
-            API URL: {Config.apiUrl}
-          </Text>
-          <Text className="text-gray-300 text-xs">
-            Expected WebSocket URL: {Config.apiUrl.replace(/^https?:\/\//, 'ws://')}/ws/chat
-          </Text>
-          <Text className="text-gray-300 text-xs">
-            Environment: {Config.environment}
-          </Text>
-          <Text className="text-gray-300 text-xs">
-            Auth Token: {user ? '✅ Present' : '❌ Missing'}
-          </Text>
-        </View>
-      )}
-      
       {/* Header */}
       <View className="mx-2 mt-2 mb-4 p-4 bg-black rounded-lg flex-row items-center">
         {(isTablet && sidebarCollapsed) && (

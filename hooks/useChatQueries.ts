@@ -61,6 +61,12 @@ export function useCreateChat() {
       
       // Create a chat using only WebSocket
       const newChatId = `chat_${Date.now()}`;
+      log('Creating new chat with WebSocket', { 
+        chatId: newChatId, 
+        messagePreview: message.substring(0, 50),
+        timestamp: Date.now()
+      });
+      
       const newChat: Chat = {
         id: newChatId,
         title: message.length > 50 ? message.substring(0, 50) + '...' : message,
@@ -77,9 +83,14 @@ export function useCreateChat() {
       };
       
       // Join the chat room via WebSocket
+      log('Joining chat room', { chatId: newChatId });
       chatWebSocket.joinChat(newChatId);
       
+      // Wait a moment to ensure the chat room is joined before sending the message
+      await new Promise(resolve => setTimeout(resolve, 100));
+      
       // Send the first message via WebSocket
+      log('Sending first message via WebSocket', { chatId: newChatId, message: message.substring(0, 50) });
       chatWebSocket.sendSimpleMessage(message);
       
       log('Chat created via WebSocket', { chatId: newChatId });

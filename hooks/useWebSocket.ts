@@ -27,7 +27,7 @@ export function useWebSocketConnection() {
       
       // Set up event listeners
       const handleConnected = () => {
-        setStatus(prev => ({ ...prev, status: 'connected', reconnectAttempts: 0 }));
+        setStatus(prev => ({ ...prev, status: 'connected', reconnectAttempts: 0, error: undefined }));
       };
 
       const handleDisconnected = () => {
@@ -52,7 +52,8 @@ export function useWebSocketConnection() {
         setStatus(prev => ({ 
           ...prev, 
           status: 'connecting',
-          reconnectAttempts: data.attempt 
+          reconnectAttempts: data.attempt,
+          error: undefined // Clear previous errors when attempting to reconnect
         }));
       };
 
