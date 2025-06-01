@@ -2,9 +2,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { router } from 'expo-router';
 import { log, logError } from '../constants/Config';
 import { useAuth } from '../contexts/AuthContext';
-import { Chat, chatApi, Message } from '../services/chatApi';
-import { chatWebSocket } from '../services/websocket';
-import { useChatRoom, useTypingIndicator, useUserPresence, useWebSocketConnection } from './useWebSocket';
+import { Chat, Message } from '../services/chatApi';
 
 // Query keys
 export const chatKeys = {
@@ -15,56 +13,54 @@ export const chatKeys = {
   detail: (id: string) => [...chatKeys.details(), id] as const,
 };
 
-// Get all chats
+// Mock data for local development
+const mockChats: Chat[] = [];
+
+// Get all chats (simplified - local only)
 export function useChatHistory() {
   const { isAuthenticated } = useAuth();
-  const { isConnected } = useWebSocketConnection();
   
   return useQuery({
     queryKey: ['chats'],
-    queryFn: () => chatApi.getChats(),
+    queryFn: async () => {
+      // Return local mock data
+      return mockChats;
+    },
     enabled: isAuthenticated,
     staleTime: 1000 * 60 * 5, // 5 minutes
-    refetchInterval: isConnected ? false : 1000 * 30, // Only poll when WebSocket disconnected
-    refetchOnWindowFocus: true,
-    refetchOnReconnect: true,
   });
 }
 
-// Get a specific chat
+// Get a specific chat (simplified - local only)
 export function useChat(chatId: string) {
   const { isAuthenticated } = useAuth();
-  const { isConnected } = useWebSocketConnection();
-  const { currentChatId } = useChatRoom(chatId);
   
   return useQuery({
     queryKey: ['chat', chatId],
-    queryFn: () => chatApi.getChat(chatId),
+    queryFn: async () => {
+      // Find chat in local mock data
+      return mockChats.find(chat => chat.id === chatId) || null;
+    },
     enabled: isAuthenticated && !!chatId,
     staleTime: 1000 * 60 * 2, // 2 minutes
-    refetchInterval: isConnected ? false : 1000 * 15, // Only poll when WebSocket disconnected
-    refetchOnWindowFocus: true,
-    refetchOnMount: true,
   });
 }
 
-// Create a new chat
+// Create a new chat (simplified - local only)
 export function useCreateChat() {
   const queryClient = useQueryClient();
-  const { isReadyToSend } = useWebSocketConnection();
   
   return useMutation({
     mutationFn: async (message: string) => {
-      if (!isReadyToSend) {
-        throw new Error('WebSocket not ready. Please wait for server connection.');
+      if (!message.trim()) {
+        throw new Error('Message cannot be empty');
       }
       
-      // Create a chat using only WebSocket
+      // Create a chat locally
       const newChatId = `chat_${Date.now()}`;
-      log('Creating new chat with WebSocket', { 
+      log('Creating new chat locally', { 
         chatId: newChatId, 
         messagePreview: message.substring(0, 50),
-        timestamp: Date.now()
       });
       
       const newChat: Chat = {
@@ -82,31 +78,46 @@ export function useCreateChat() {
         createdAt: new Date(),
       };
       
-      // Join the chat room via WebSocket
-      log('Joining chat room', { chatId: newChatId });
-      chatWebSocket.joinChat(newChatId);
+      // Add to local storage
+      mockChats.unshift(newChat);
       
-      // Wait a moment to ensure the chat room is joined before sending the message
-      await new Promise(resolve => setTimeout(resolve, 100));
+      // Simulate AI response after a delay
+      setTimeout(() => {
+        const aiResponse: Message = {
+          id: `ai_${Date.now()}`,
+          content: `This is a mock AI response to: "${message.substring(0, 30)}${message.length > 30 ? '...' : ''}"`,
+          role: 'assistant',
+          timestamp: new Date(),
+          chatId: newChatId,
+        };
+        
+        // Add AI response to the chat
+        const chatIndex = mockChats.findIndex(chat => chat.id === newChatId);
+        if (chatIndex !== -1) {
+          mockChats[chatIndex].messages.push(aiResponse);
+          mockChats[chatIndex].lastMessage = aiResponse.content;
+          mockChats[chatIndex].lastMessageTime = aiResponse.timestamp;
+          
+          // Update cache
+          queryClient.setQueryData(['chat', newChatId], mockChats[chatIndex]);
+          queryClient.setQueryData(['chats'], [...mockChats]);
+        }
+      }, 1000 + Math.random() * 2000); // 1-3 second delay
       
-      // Send the first message via WebSocket
-      log('Sending first message via WebSocket', { chatId: newChatId, message: message.substring(0, 50) });
-      chatWebSocket.sendSimpleMessage(message);
-      
-      log('Chat created via WebSocket', { chatId: newChatId });
+      log('Chat created locally', { chatId: newChatId });
       return newChat;
     },
     onSuccess: (newChat) => {
-      // Add new chat to cache with optimistic update
+      // Add new chat to cache
       queryClient.setQueryData(['chats'], (oldData: Chat[] | undefined) => {
-        return oldData ? [newChat, ...oldData] : [newChat];
+        return [newChat, ...(oldData || [])];
       });
 
       // Set the chat data in cache
       queryClient.setQueryData(['chat', newChat.id], newChat);
 
       // Navigate to the new chat
-      router.push(`/?chatId=${newChat.id}`);
+      router.push(`/?chatId=${newChat.id}` as any);
     },
     onError: (error) => {
       logError('Failed to create chat', error);
@@ -114,141 +125,125 @@ export function useCreateChat() {
   });
 }
 
-// Send a message
+// Send a message (simplified - local only)
 export function useSendMessage() {
   const queryClient = useQueryClient();
-  const { isReadyToSend } = useWebSocketConnection();
   
   return useMutation({
     mutationFn: async ({ chatId, content }: { chatId: string; content: string }) => {
-      if (!isReadyToSend) {
-        throw new Error('WebSocket not ready. Please wait for server connection.');
+      if (!content.trim()) {
+        throw new Error('Message cannot be empty');
       }
 
-      // Create optimistic message using the correct interface
-      const tempMessage: Message = {
-        id: `temp-${Date.now()}`,
+      const userMessage: Message = {
+        id: `msg_${Date.now()}`,
         chatId,
         content,
         role: 'user',
         timestamp: new Date(),
       };
 
-      // Add optimistic message to cache
-      queryClient.setQueryData(['chat', chatId], (oldData: Chat | null) => {
-        if (!oldData) return oldData;
-        
-        const newMessages = [...oldData.messages, tempMessage];
-        return { ...oldData, messages: newMessages };
-      });
+      // Add message to local chat
+      const chatIndex = mockChats.findIndex(chat => chat.id === chatId);
+      if (chatIndex !== -1) {
+        mockChats[chatIndex].messages.push(userMessage);
+        mockChats[chatIndex].lastMessage = content;
+        mockChats[chatIndex].lastMessageTime = new Date();
+      }
 
-      try {
-        // Join the chat room if not already joined
-        chatWebSocket.joinChat(chatId);
-        
-        // Send via WebSocket only
-        chatWebSocket.sendSimpleMessage(content);
-
-        // Return the message (will be replaced when WebSocket response comes back)
-        return {
-          id: `msg_${Date.now()}`,
-          content,
-          role: 'user' as const,
+      // Simulate AI response after a delay
+      setTimeout(() => {
+        const aiResponse: Message = {
+          id: `ai_${Date.now()}`,
+          content: `This is a mock AI response to: "${content.substring(0, 30)}${content.length > 30 ? '...' : ''}"`,
+          role: 'assistant',
           timestamp: new Date(),
           chatId,
         };
-      } catch (error) {
-        // Remove optimistic message on error
-        queryClient.setQueryData(['chat', chatId], (oldData: Chat | null) => {
-          if (!oldData) return oldData;
+        
+        // Add AI response to the chat
+        if (chatIndex !== -1) {
+          mockChats[chatIndex].messages.push(aiResponse);
+          mockChats[chatIndex].lastMessage = aiResponse.content;
+          mockChats[chatIndex].lastMessageTime = aiResponse.timestamp;
           
-          const filteredMessages = oldData.messages.filter(msg => msg.id !== tempMessage.id);
-          return { ...oldData, messages: filteredMessages };
-        });
-        throw error;
-      }
+          // Update cache
+          queryClient.setQueryData(['chat', chatId], mockChats[chatIndex]);
+          queryClient.setQueryData(['chats'], [...mockChats]);
+        }
+      }, 1000 + Math.random() * 2000); // 1-3 second delay
+
+      return userMessage;
     },
     onSuccess: (newMessage, { chatId }) => {
-      // Replace optimistic message with real message
+      // Update chat cache with new message
       queryClient.setQueryData(['chat', chatId], (oldData: Chat | null) => {
         if (!oldData) return oldData;
         
-        const messages = oldData.messages;
-        // Remove temp message and add real message
-        const filteredMessages = messages.filter(msg => !msg.id.startsWith('temp-'));
-        
-        // Avoid duplicates
-        if (filteredMessages.some(msg => msg.id === newMessage.id)) {
-          return { ...oldData, messages: filteredMessages };
-        }
-        
         return { 
           ...oldData, 
-          messages: [...filteredMessages, newMessage],
+          messages: [...oldData.messages, newMessage],
           lastMessage: newMessage.content,
           lastMessageTime: newMessage.timestamp
         };
       });
 
       // Update chat list
-      queryClient.invalidateQueries({ queryKey: ['chats'] });
+      queryClient.setQueryData(['chats'], (oldData: Chat[] | undefined) => {
+        if (!oldData) return oldData;
+        
+        return oldData.map(chat => {
+          if (chat.id === chatId) {
+            return {
+              ...chat,
+              lastMessage: newMessage.content,
+              lastMessageTime: newMessage.timestamp
+            };
+          }
+          return chat;
+        });
+      });
       
-      log('Message sent via WebSocket successfully', { messageId: newMessage.id, chatId });
+      log('Message sent locally', { messageId: newMessage.id, chatId });
     },
     onError: (error, { chatId }) => {
-      logError('Failed to send message via WebSocket', error);
-      
-      // Ensure cache is cleaned up
-      queryClient.invalidateQueries({ queryKey: ['chat', chatId] });
+      logError('Failed to send message', error);
     },
   });
 }
 
-// Get AI response - simplified to just wait for WebSocket response
-export function useGetAIResponse() {
-  const queryClient = useQueryClient();
-  
-  return useMutation({
-    mutationFn: async ({ chatId, userMessage }: { chatId: string; userMessage: string }) => {
-      // Since we're using WebSocket, the AI response will come automatically
-      // This function now just returns a placeholder that will be replaced by WebSocket response
-      return {
-        id: `ai_${Date.now()}`,
-        content: 'Waiting for AI response...',
-        role: 'assistant' as const,
-        timestamp: new Date(),
-        chatId,
-      };
-    },
-    onSuccess: (newMessage, { chatId }) => {
-      // The real AI response will come via WebSocket, so we don't add this placeholder to cache
-      log('AI response request sent', { chatId });
-    },
-    onError: (error) => {
-      logError('Failed to request AI response', error);
-    }
-  });
-}
-
-// Delete a chat
+// Delete a chat (simplified - local only)
 export function useDeleteChat() {
   const queryClient = useQueryClient();
   
   return useMutation({
-    mutationFn: (chatId: string) => chatApi.deleteChat(chatId),
+    mutationFn: async (chatId: string) => {
+      // Remove from local storage
+      const chatIndex = mockChats.findIndex(chat => chat.id === chatId);
+      if (chatIndex !== -1) {
+        mockChats.splice(chatIndex, 1);
+      }
+      return chatId;
+    },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['chats'] });
     },
   });
 }
 
-// Update chat title
+// Update chat title (simplified - local only)
 export function useUpdateChatTitle() {
   const queryClient = useQueryClient();
   
   return useMutation({
-    mutationFn: ({ chatId, title }: { chatId: string; title: string }) =>
-      chatApi.updateChatTitle(chatId, title),
+    mutationFn: async ({ chatId, title }: { chatId: string; title: string }) => {
+      // Update in local storage
+      const chatIndex = mockChats.findIndex(chat => chat.id === chatId);
+      if (chatIndex !== -1) {
+        mockChats[chatIndex].title = title;
+      }
+      return { chatId, title };
+    },
     onSuccess: (_, { chatId }) => {
       queryClient.invalidateQueries({ queryKey: ['chat', chatId] });
       queryClient.invalidateQueries({ queryKey: ['chats'] });
@@ -256,97 +251,31 @@ export function useUpdateChatTitle() {
   });
 }
 
-// NEW: Typing functionality with WebSocket integration
-export function useTyping(chatId: string | null) {
-  const { typingUsers, startTyping, stopTyping, isTyping } = useTypingIndicator(chatId);
-  
-  return {
-    typingUsers,
-    startTyping,
-    stopTyping,
-    isTyping,
-    // Helper to format typing display
-    getTypingDisplay: () => {
-      if (typingUsers.length === 0) return '';
-      if (typingUsers.length === 1) return `${typingUsers[0].userName} is typing...`;
-      if (typingUsers.length === 2) return `${typingUsers[0].userName} and ${typingUsers[1].userName} are typing...`;
-      return `${typingUsers[0].userName} and ${typingUsers.length - 1} others are typing...`;
-    }
-  };
-}
-
-// NEW: Connection status for UI display
+// Simplified connection status (always ready)
 export function useConnectionStatus() {
-  const { status, reconnectAttempts, error, reconnect, isConnected, isReadyToSend, isServerReady } = useWebSocketConnection();
-  
   return {
-    status,
-    reconnectAttempts,
-    error,
-    reconnect,
-    isConnected,
-    isReadyToSend,
-    isServerReady,
-    // Helper to get user-friendly status message
-    getStatusMessage: () => {
-      switch (status) {
-        case 'connecting':
-          return reconnectAttempts > 0 
-            ? `Reconnecting... (${reconnectAttempts}/5)` 
-            : 'Connecting to server...';
-        case 'connected':
-          return isServerReady ? 'Connected' : 'Waiting for server welcome...';
-        case 'disconnected':
-          return 'Offline';
-        case 'error':
-          return error || 'Connection error';
-        default:
-          return 'Unknown';
-      }
-    },
-    // Helper to determine if we should show status indicator
-    shouldShowStatus: () => status !== 'connected' || !isServerReady,
-    // Helper to check if actively trying to reconnect
-    isReconnecting: () => status === 'connecting' && reconnectAttempts > 0,
-    // Helper to check if max attempts reached
-    hasMaxedRetries: () => status === 'error' && reconnectAttempts >= 5,
-    // Helper to get connection readiness for send button
-    canSendMessages: () => isReadyToSend
+    status: 'connected' as const,
+    reconnectAttempts: 0,
+    error: null,
+    reconnect: () => {},
+    isConnected: true,
+    isReadyToSend: true,
+    isServerReady: true,
+    getStatusMessage: () => 'Connected (Local Mode)',
+    shouldShowStatus: () => false,
+    isReconnecting: () => false,
+    hasMaxedRetries: () => false,
+    canSendMessages: () => true
   };
 }
 
-// NEW: User presence in chat rooms
-export function useChatPresence(chatId: string | null) {
-  const { onlineUsers } = useUserPresence(chatId);
-  
+// Simplified typing (no-op)
+export function useTyping(chatId: string | null) {
   return {
-    onlineUsers,
-    onlineCount: onlineUsers.length,
-    isUserOnline: (userId: string) => onlineUsers.includes(userId)
-  };
-}
-
-// NEW: Offline message queue status
-export function useOfflineStatus() {
-  const queryClient = useQueryClient();
-  const { isConnected } = useWebSocketConnection();
-  
-  // Get pending mutations (offline messages)
-  const mutationCache = queryClient.getMutationCache();
-  const pendingMutations = mutationCache.getAll().filter(
-    mutation => mutation.state.status === 'pending' || mutation.state.status === 'error'
-  );
-
-  return {
-    isOffline: !isConnected,
-    pendingMessages: pendingMutations.length,
-    // Helper to retry all failed mutations
-    retryPendingMessages: () => {
-      pendingMutations.forEach(mutation => {
-        if (mutation.state.status === 'error') {
-          mutation.continue();
-        }
-      });
-    }
+    typingUsers: [],
+    startTyping: () => {},
+    stopTyping: () => {},
+    isTyping: false,
+    getTypingDisplay: () => ''
   };
 } 

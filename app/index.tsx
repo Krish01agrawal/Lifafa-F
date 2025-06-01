@@ -2,30 +2,29 @@ import { Ionicons } from '@expo/vector-icons';
 import { router, useLocalSearchParams } from 'expo-router';
 import React, { useEffect, useRef, useState } from 'react';
 import {
-    ActivityIndicator,
-    Alert,
-    Dimensions,
-    FlatList,
-    Image,
-    KeyboardAvoidingView,
-    Platform,
-    Text,
-    TextInput,
-    TouchableOpacity,
-    View
+  ActivityIndicator,
+  Alert,
+  Dimensions,
+  FlatList,
+  Image,
+  KeyboardAvoidingView,
+  Platform,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { CodeBlock } from '../components/chat/CodeBlock';
 import { useAuth } from '../contexts/AuthContext';
 import {
-    useChat,
-    useChatHistory,
-    useCreateChat,
-    useDeleteChat,
-    useSendMessage,
-    useTyping
+  useChat,
+  useChatHistory,
+  useCreateChat,
+  useDeleteChat,
+  useSendMessage,
+  useTyping
 } from '../hooks/useChatQueries';
-import { useWebSocketConnection } from '../hooks/useWebSocket';
 import { Chat, Message } from '../services/chatApi';
 
 const { width } = Dimensions.get('window');
@@ -205,7 +204,6 @@ export default function ChatScreen() {
   const { user, logout } = useAuth();
   const { data: chats = [], isLoading: chatsLoading } = useChatHistory();
   const { data: currentChat, isLoading: chatLoading } = useChat(chatId || '');
-  const { status, isReadyToSend, isServerReady } = useWebSocketConnection();
   const createChatMutation = useCreateChat();
   const sendMessageMutation = useSendMessage();
   const deleteChatMutation = useDeleteChat();
@@ -230,19 +228,8 @@ export default function ChatScreen() {
     }
   }, [currentChat?.messages.length]);
 
-  // Get dynamic placeholder text based on WebSocket status
+  // Simplified placeholder text (always ready)
   const getPlaceholderText = () => {
-    if (!isReadyToSend) {
-      switch (status) {
-        case 'connecting':
-          return 'Connecting...';
-        case 'disconnected':
-        case 'error':
-          return 'Connection lost...';
-        default:
-          return isServerReady ? 'Type a message...' : 'Waiting for server...';
-      }
-    }
     return 'Type a message...';
   };
 
@@ -261,7 +248,7 @@ export default function ChatScreen() {
         activeChatId = newChatResult.id;
         router.replace(`/?chatId=${activeChatId}`);
         
-        // AI response will come automatically via WebSocket
+        // AI response will come automatically from the local simulation
       } else {
         // Send message to existing chat
         await sendMessageMutation.mutateAsync({
@@ -269,7 +256,7 @@ export default function ChatScreen() {
           content: messageContent,
         });
 
-        // AI response will come automatically via WebSocket
+        // AI response will come automatically from the local simulation
       }
     } catch (error) {
       console.error('Error sending message:', error);
@@ -481,8 +468,8 @@ export default function ChatScreen() {
             value={inputText}
             onChangeText={(text) => {
               setInputText(text);
-              // Start typing indicator when user types (only if ready to send)
-              if (text.length > 0 && isReadyToSend) {
+              // Start typing indicator when user types
+              if (text.length > 0) {
                 startTyping();
               } else {
                 stopTyping();
@@ -493,10 +480,7 @@ export default function ChatScreen() {
             placeholderTextColor="#6B7280"
             multiline
             maxLength={1000}
-            editable={isReadyToSend} // Disable input when not ready
-            className={`flex-1 p-3 rounded-2xl mr-3 max-h-32 ${
-              isReadyToSend ? 'bg-gray-800 text-white' : 'bg-gray-700 text-gray-400'
-            }`}
+            className="flex-1 p-3 rounded-2xl mr-3 max-h-32 bg-gray-800 text-white"
             style={{ textAlignVertical: 'top' }}
           />
           <TouchableOpacity
@@ -504,9 +488,9 @@ export default function ChatScreen() {
               stopTyping(); // Stop typing when sending
               await handleSendMessage();
             }}
-            disabled={!inputText.trim() || sendMessageMutation.isPending || !isReadyToSend}
+            disabled={!inputText.trim() || sendMessageMutation.isPending}
             className={`p-3 rounded-full ${
-              inputText.trim() && !sendMessageMutation.isPending && isReadyToSend
+              inputText.trim() && !sendMessageMutation.isPending
                 ? 'bg-blue-600'
                 : 'bg-gray-600'
             }`}
@@ -517,7 +501,7 @@ export default function ChatScreen() {
               <Ionicons 
                 name="send" 
                 size={20} 
-                color={isReadyToSend && inputText.trim() ? "white" : "#9CA3AF"} 
+                color={inputText.trim() ? "white" : "#9CA3AF"} 
               />
             )}
           </TouchableOpacity>

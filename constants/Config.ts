@@ -1,64 +1,58 @@
 import Constants from 'expo-constants';
 
-// Type definitions for better TypeScript support
-interface AppConfig {
-  // API Configuration
+interface ConfigType {
+  env: 'development' | 'production';
   apiUrl: string;
-  apiTimeout: number;
-  retryAttempts: number;
-  
-  // App Information
-  appName: string;
-  appVersion: string;
-  
-  // Environment Configuration
-  environment: string;
-  debugMode: boolean;
   enableLogging: boolean;
-  
-  // OAuth Configuration
-  googleClientId: string;
-  
-  // Feature Flags
-  enableWebSocket: boolean;
-  enableAnalytics: boolean;
+  enableDetailedLogging: boolean;
+  enableMockApi: boolean;
 }
 
-// Get configuration from Expo Constants
-const getConfig = (): AppConfig => {
-  const extra = Constants.expoConfig?.extra || {};
-  
-  return {
-    // API Configuration
-    apiUrl: extra.apiUrl || 'http://localhost:8001',
-    apiTimeout: extra.apiTimeout || 10000,
-    retryAttempts: extra.retryAttempts || 3,
-    
-    // App Information
-    appName: extra.appName || 'Lifafa',
-    appVersion: extra.appVersion || '1.0.0',
-    
-    // Environment Configuration
-    environment: extra.environment || 'development',
-    debugMode: extra.debugMode || false,
-    enableLogging: extra.enableLogging || true, // Enable by default for now
-    
-    // OAuth Configuration
-    googleClientId: extra.googleClientId || '',
-    
-    // Feature Flags
-    enableWebSocket: extra.enableWebSocket !== undefined ? extra.enableWebSocket : false,
-    enableAnalytics: extra.enableAnalytics || false,
-  };
+const extra = Constants.expoConfig?.extra || {};
+
+// Core configuration
+export const Config: ConfigType = {
+  env: extra.env || 'development',
+  apiUrl: extra.apiUrl || 'http://localhost:3001/api',
+  enableLogging: extra.enableLogging !== undefined ? extra.enableLogging : true,
+  enableDetailedLogging: extra.enableDetailedLogging !== undefined ? extra.enableDetailedLogging : false,
+  enableMockApi: extra.enableMockApi !== undefined ? extra.enableMockApi : false,
 };
 
-// Export the configuration object
-export const Config = getConfig();
+// Log current config (only in development)
+if (Config.env === 'development' && Config.enableLogging) {
+  console.log('📱 App Config:', {
+    env: Config.env,
+    apiUrl: Config.apiUrl,
+    enableLogging: Config.enableLogging,
+    enableDetailedLogging: Config.enableDetailedLogging,
+    enableMockApi: Config.enableMockApi,
+  });
+}
+
+// Conditional logging
+export const log = (...args: any[]) => {
+  if (Config.enableLogging) {
+    console.log('[LifafaApp]', ...args);
+  }
+};
+
+export const logError = (...args: any[]) => {
+  if (Config.enableLogging) {
+    console.error('[LifafaApp Error]', ...args);
+  }
+};
+
+export const logDetailed = (...args: any[]) => {
+  if (Config.enableDetailedLogging) {
+    console.log('[LifafaApp Detailed]', ...args);
+  }
+};
 
 // Helper functions for common checks
-export const isDevelopment = () => Config.environment === 'development';
-export const isProduction = () => Config.environment === 'production';
-export const isDebugMode = () => Config.debugMode;
+export const isDevelopment = () => Config.env === 'development';
+export const isProduction = () => Config.env === 'production';
+export const isDebugMode = () => Config.env === 'development';
 
 // API Configuration helpers
 export const getApiUrl = (endpoint: string = '') => {
@@ -69,19 +63,6 @@ export const getApiUrl = (endpoint: string = '') => {
   return `${baseUrl}${cleanEndpoint}`;
 };
 
-// Logging helper
-export const log = (message: string, ...args: any[]) => {
-  if (Config.enableLogging || isDevelopment()) {
-    console.log(`[${Config.appName}]`, message, ...args);
-  }
-};
-
-export const logError = (message: string, error?: any) => {
-  if (Config.enableLogging || isDevelopment()) {
-    console.error(`[${Config.appName}] ERROR:`, message, error);
-  }
-};
-
 // Export types for use in other files
-export type { AppConfig };
+export type { ConfigType };
  

@@ -39,28 +39,18 @@ export default {
       typedRoutes: true
     },
     extra: {
-      // API Configuration
-      apiUrl: process.env.EXPO_PUBLIC_API_URL || "http://localhost:8001",
-      
-      // App Information
-      appName: process.env.EXPO_PUBLIC_APP_NAME || "Lifafa",
-      appVersion: process.env.EXPO_PUBLIC_APP_VERSION || "1.0.0",
-      
       // Environment Configuration
-      environment: process.env.NODE_ENV || "development",
-      debugMode: process.env.EXPO_PUBLIC_DEBUG_MODE === "true",
-      enableLogging: process.env.EXPO_PUBLIC_ENABLE_LOGGING === "true",
-      
-      // OAuth Configuration
-      googleClientId: process.env.EXPO_PUBLIC_GOOGLE_CLIENT_ID || "",
-      
-      // Feature Flags
-      enableWebSocket: true,
-      enableAnalytics: process.env.EXPO_PUBLIC_ENABLE_ANALYTICS === "true",
+      env: process.env.NODE_ENV || "development",
       
       // API Configuration
-      apiTimeout: parseInt(process.env.EXPO_PUBLIC_API_TIMEOUT || "10000"),
-      retryAttempts: parseInt(process.env.EXPO_PUBLIC_RETRY_ATTEMPTS || "3"),
+      apiUrl: process.env.EXPO_PUBLIC_API_URL || "http://localhost:3001/api",
+      
+      // Logging Configuration
+      enableLogging: process.env.EXPO_PUBLIC_ENABLE_LOGGING !== "false",
+      enableDetailedLogging: process.env.EXPO_PUBLIC_ENABLE_DETAILED_LOGGING === "true",
+      
+      // Development Features
+      enableMockApi: process.env.EXPO_PUBLIC_ENABLE_MOCK_API === "true",
     }
   }
 }; 

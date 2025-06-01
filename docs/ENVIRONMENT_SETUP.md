@@ -1,93 +1,70 @@
-# Environment Configuration Setup
+# Environment Setup
 
-This app uses Expo Constants for configuration management, allowing you to set environment variables that are accessible throughout your application.
+This document describes how to set up environment variables for the Lifafa app.
 
-## Setting Up Environment Variables
+## Environment Variables
 
-### 1. Create a `.env` file in your project root
+Create a `.env` file in the root directory with the following variables:
 
 ```bash
-# API Configuration
-EXPO_PUBLIC_API_URL=http://localhost:3000
-
-# App Information
-EXPO_PUBLIC_APP_NAME=Lifafa
-EXPO_PUBLIC_APP_VERSION=1.0.0
-
-# Environment Configuration
+# Environment
 NODE_ENV=development
-EXPO_PUBLIC_DEBUG_MODE=true
-EXPO_PUBLIC_ENABLE_LOGGING=true
-
-# OAuth Configuration
-EXPO_PUBLIC_GOOGLE_CLIENT_ID=your-google-client-id-here
-
-# Feature Flags
-EXPO_PUBLIC_ENABLE_WEBSOCKET=false
-EXPO_PUBLIC_ENABLE_ANALYTICS=false
 
 # API Configuration
-EXPO_PUBLIC_API_TIMEOUT=10000
-EXPO_PUBLIC_RETRY_ATTEMPTS=3
+EXPO_PUBLIC_API_URL=http://localhost:3001/api
+
+# Logging Configuration  
+EXPO_PUBLIC_ENABLE_LOGGING=true
+EXPO_PUBLIC_ENABLE_DETAILED_LOGGING=false
+
+# Development Features
+EXPO_PUBLIC_ENABLE_MOCK_API=true
 ```
 
-### 2. Important Notes
-
-- **EXPO_PUBLIC_ prefix**: Variables with this prefix are available in your app at runtime
-- **Variables without prefix**: Only available during build time (like NODE_ENV)
-- **Security**: Add `.env` to your `.gitignore` file to keep secrets safe
-- **Default values**: The app has sensible defaults, so you only need to set what you want to override
-
-### 3. Accessing Configuration in Code
-
-The app uses a centralized configuration system via `constants/Config.ts`:
-
-```typescript
-import { Config, getApiUrl, log } from '../constants/Config';
-
-// Access configuration
-console.log(Config.apiUrl); // Gets EXPO_PUBLIC_API_URL or default
-
-// Use helper functions
-const endpoint = getApiUrl('/auth/login'); // Builds full URL
-log('Debug message'); // Only logs if logging is enabled
-```
-
-### 4. Configuration Options
+## Environment Variable Descriptions
 
 | Variable | Default | Description |
 |----------|---------|-------------|
-| `EXPO_PUBLIC_API_URL` | `http://localhost:3000` | Backend API base URL |
-| `EXPO_PUBLIC_APP_NAME` | `Lifafa` | App name displayed in logs |
-| `EXPO_PUBLIC_DEBUG_MODE` | `false` | Enable debug features |
-| `EXPO_PUBLIC_ENABLE_LOGGING` | `false` | Enable console logging |
-| `EXPO_PUBLIC_GOOGLE_CLIENT_ID` | `""` | Google OAuth client ID |
-| `EXPO_PUBLIC_ENABLE_WEBSOCKET` | `false` | Enable WebSocket features |
-| `EXPO_PUBLIC_ENABLE_ANALYTICS` | `false` | Enable analytics tracking |
-| `EXPO_PUBLIC_API_TIMEOUT` | `10000` | API request timeout (ms) |
-| `EXPO_PUBLIC_RETRY_ATTEMPTS` | `3` | Number of API retry attempts |
+| `NODE_ENV` | `development` | Environment mode |
+| `EXPO_PUBLIC_API_URL` | `http://localhost:3001/api` | Backend API URL (not used in local mode) |
+| `EXPO_PUBLIC_ENABLE_LOGGING` | `true` | Enable console logging |
+| `EXPO_PUBLIC_ENABLE_DETAILED_LOGGING` | `false` | Enable detailed debug logging |
+| `EXPO_PUBLIC_ENABLE_MOCK_API` | `true` | Enable mock API responses |
 
-### 5. Environment-Specific Configuration
+## Local Development Mode
 
-For different environments (development, staging, production), you can:
+The app currently runs in **local-only mode** with the following features:
 
-1. Use different `.env` files (`.env.development`, `.env.production`)
-2. Set up your deployment pipeline to inject the appropriate values
-3. Use Expo's EAS Build secrets for production values
+- **No backend required**: Chat functionality works entirely locally
+- **Mock AI responses**: Simulated AI responses with random delays
+- **Local chat storage**: Chats are stored in memory during the session
+- **No authentication**: Authentication is mocked locally
 
-### 6. Expo Constants Integration
+## Development vs Production
 
-The configuration system leverages Expo Constants through `app.config.js`:
+### Development Mode
+- Shows connection status in debug components
+- Enables detailed logging
+- Uses mock data and responses
 
-- Environment variables are loaded into the `extra` field
-- Constants.expoConfig.extra provides runtime access
-- Type-safe configuration through the `Config` utility
-- Centralized default values and validation
+### Production Mode  
+- Hides debug components
+- Reduced logging
+- Would connect to real backend (when implemented)
 
-### 7. Benefits
+## Configuration Files
 
-- **Type Safety**: Full TypeScript support for all configuration values
-- **Centralized**: All configuration in one place
-- **Environment Aware**: Easy switching between development/production
-- **Secure**: Proper handling of sensitive data
-- **Flexible**: Easy to add new configuration options 
+The app configuration is managed through:
+
+1. **`app.config.js`** - Expo configuration and environment variables
+2. **`constants/Config.ts`** - Runtime configuration and helpers
+3. **`.env`** - Environment-specific variables (create this file)
+
+## Getting Started
+
+1. Copy the environment variables above into a `.env` file
+2. Install dependencies: `npm install`
+3. Start the development server: `npx expo start`
+4. The app will run in local mode with mock data
+
+No backend setup is required for local development! 
