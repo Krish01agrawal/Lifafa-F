@@ -34,6 +34,7 @@ export default function ChatScreen() {
   const [inputText, setInputText] = useState('');
   const [connectionStatus, setConnectionStatus] = useState<ConnectionStatus>('disconnected');
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
+  const [isWaitingForResponse, setIsWaitingForResponse] = useState(false);
   const scrollViewRef = useRef<ScrollView>(null);
   const wsRef = useRef<WebSocket | null>(null);
   
@@ -105,6 +106,9 @@ export default function ChatScreen() {
           const data = JSON.parse(event.data);
           log('Received WebSocket message:', data);
 
+          // Hide loading state when response arrives
+          setIsWaitingForResponse(false);
+
           // Handle the new message format with reply array
           if (data.message && data.message.reply && Array.isArray(data.message.reply)) {
             const replyText = data.message.reply[0]; // Get the first reply from array
@@ -130,6 +134,7 @@ export default function ChatScreen() {
           }
         } catch (error) {
           logError('Error parsing WebSocket message:', error);
+          setIsWaitingForResponse(false);
         }
       };
 
@@ -184,6 +189,9 @@ export default function ChatScreen() {
     };
     setMessages(prev => [...prev, userMessage]);
     setInputText('');
+    
+    // Show loading state
+    setIsWaitingForResponse(true);
 
     // Send message through WebSocket
     if (wsRef.current && wsRef.current.readyState === WebSocket.OPEN) {
@@ -191,6 +199,7 @@ export default function ChatScreen() {
       wsRef.current.send(JSON.stringify({ message: messageText }));
     } else {
       logError('WebSocket not connected, cannot send message');
+      setIsWaitingForResponse(false);
     }
 
     // Scroll to bottom
@@ -244,6 +253,74 @@ export default function ChatScreen() {
     </View>
   );
 
+  const LoadingMessageBubble = () => {
+    // Animation for typing dots
+    const dot1Opacity = useSharedValue(0.3);
+    const dot2Opacity = useSharedValue(0.3);
+    const dot3Opacity = useSharedValue(0.3);
+
+    React.useEffect(() => {
+      const animateDots = () => {
+        dot1Opacity.value = withTiming(1, { duration: 500 }, () => {
+          dot1Opacity.value = withTiming(0.3, { duration: 500 });
+        });
+        
+        setTimeout(() => {
+          dot2Opacity.value = withTiming(1, { duration: 500 }, () => {
+            dot2Opacity.value = withTiming(0.3, { duration: 500 });
+          });
+        }, 200);
+        
+        setTimeout(() => {
+          dot3Opacity.value = withTiming(1, { duration: 500 }, () => {
+            dot3Opacity.value = withTiming(0.3, { duration: 500 });
+          });
+        }, 400);
+      };
+
+      const interval = setInterval(animateDots, 1200);
+      animateDots(); // Start immediately
+
+      return () => clearInterval(interval);
+    }, []);
+
+    const dot1Style = useAnimatedStyle(() => ({
+      opacity: dot1Opacity.value,
+    }));
+
+    const dot2Style = useAnimatedStyle(() => ({
+      opacity: dot2Opacity.value,
+    }));
+
+    const dot3Style = useAnimatedStyle(() => ({
+      opacity: dot3Opacity.value,
+    }));
+
+    return (
+      <View className="mb-3 items-start">
+        <View className="bg-gray-700 rounded-2xl rounded-bl-md px-4 py-3 max-w-[75%]">
+          <View className="flex-row items-center">
+            <View className="flex-row space-x-1 mr-3">
+              <Animated.View 
+                className="w-2 h-2 bg-gray-400 rounded-full"
+                style={dot1Style}
+              />
+              <Animated.View 
+                className="w-2 h-2 bg-gray-400 rounded-full"
+                style={dot2Style}
+              />
+              <Animated.View 
+                className="w-2 h-2 bg-gray-400 rounded-full"
+                style={dot3Style}
+              />
+            </View>
+            <Text className="text-gray-400 text-xs">AI is typing...</Text>
+          </View>
+        </View>
+      </View>
+    );
+  };
+
   // Animated styles
   const animatedSidebarStyle = useAnimatedStyle(() => {
     return {
@@ -258,17 +335,108 @@ export default function ChatScreen() {
       className="bg-gray-900 border-r border-gray-800 overflow-hidden"
     >
       {/* Sidebar Header */}
-      <View className="px-4 py-3 border-b border-gray-800">
-        <Text className="text-white text-lg font-semibold">
-          Sidebar
-        </Text>
+      <View className="px-4 py-4 border-b border-gray-800">
+        <View className="flex-row items-center justify-between mb-3">
+          <Text className="text-white text-xl font-bold">
+            Chats
+          </Text>
+          <TouchableOpacity className="w-8 h-8 bg-blue-600 rounded-full items-center justify-center">
+            <Ionicons name="add" size={20} color="white" />
+          </TouchableOpacity>
+        </View>
+        
+        {/* Search Bar */}
+        <View className="bg-gray-800 rounded-xl px-3 py-2 flex-row items-center">
+          <Ionicons name="search" size={16} color="#9CA3AF" />
+          <Text className="text-gray-400 text-sm ml-2 flex-1">Search chats...</Text>
+        </View>
       </View>
       
-      {/* Sidebar Content */}
-      <ScrollView className="flex-1 px-4 py-4">
-        <Text className="text-gray-400 text-sm">
-          Sidebar content will go here
-        </Text>
+      {/* Chat History */}
+      <ScrollView className="flex-1" showsVerticalScrollIndicator={false}>
+        {/* Current Chat */}
+        <View className="px-3 py-2">
+          <View className="bg-blue-600/20 border border-blue-600/30 rounded-xl p-3 mb-2">
+            <View className="flex-row items-start justify-between">
+              <View className="flex-1 pr-3">
+                <Text className="text-white font-semibold text-sm mb-1" numberOfLines={1}>
+                  Current Chat
+                </Text>
+                <Text className="text-blue-300 text-xs" numberOfLines={2}>
+                  Hello! I'm your AI assistant. How can I help you with your emails today?
+                </Text>
+                <Text className="text-blue-400 text-xs mt-2">
+                  {new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                </Text>
+              </View>
+              <View className="w-2 h-2 bg-blue-500 rounded-full mt-1" />
+            </View>
+          </View>
+        </View>
+
+        {/* Previous Chats */}
+        <View className="px-3">
+          {[...Array(5)].map((_, index) => (
+            <TouchableOpacity 
+              key={index}
+              className="bg-gray-800/50 rounded-xl p-3 mb-2 border border-gray-700/50"
+              style={{
+                shadowColor: '#000',
+                shadowOffset: { width: 0, height: 1 },
+                shadowOpacity: 0.1,
+                shadowRadius: 2,
+              }}
+            >
+              <View className="flex-row items-start justify-between">
+                <View className="flex-1 pr-3">
+                  <View className="flex-row items-center mb-2">
+                    {/* Title Skeleton */}
+                    <View className="bg-gray-600 rounded h-3 flex-1 mr-2" style={{ width: `${60 + Math.random() * 30}%` }} />
+                    {/* Unread indicator for some items */}
+                    {index === 1 && (
+                      <View className="w-2 h-2 bg-blue-500 rounded-full" />
+                    )}
+                  </View>
+                  
+                  {/* Message Preview Skeleton */}
+                  <View className="mb-2">
+                    <View className="bg-gray-700 rounded h-2.5 mb-1" style={{ width: `${80 + Math.random() * 15}%` }} />
+                    <View className="bg-gray-700 rounded h-2.5" style={{ width: `${50 + Math.random() * 30}%` }} />
+                  </View>
+                  
+                  {/* Timestamp Skeleton */}
+                  <View className="bg-gray-700 rounded h-2" style={{ width: `${30 + Math.random() * 20}%` }} />
+                </View>
+                
+                {/* Delete Button */}
+                <TouchableOpacity 
+                  className="w-8 h-8 bg-red-600/20 rounded-full items-center justify-center ml-2"
+                  style={{
+                    shadowColor: '#EF4444',
+                    shadowOffset: { width: 0, height: 1 },
+                    shadowOpacity: 0.2,
+                    shadowRadius: 2,
+                  }}
+                >
+                  <Ionicons name="trash-outline" size={14} color="#EF4444" />
+                </TouchableOpacity>
+              </View>
+            </TouchableOpacity>
+          ))}
+        </View>
+
+        {/* Coming Soon Notice */}
+        <View className="px-3 py-6">
+          <View className="bg-amber-600/10 border border-amber-600/20 rounded-xl p-4 items-center">
+            <Ionicons name="time-outline" size={24} color="#F59E0B" />
+            <Text className="text-amber-400 font-medium text-sm mt-2 mb-1">
+              Coming Soon
+            </Text>
+            <Text className="text-amber-300/80 text-xs text-center leading-4">
+              Chat history and management features are currently in development
+            </Text>
+          </View>
+        </View>
       </ScrollView>
     </Animated.View>
   );
@@ -338,6 +506,9 @@ export default function ChatScreen() {
               {messages.map((message) => (
                 <MessageBubble key={message.id} message={message} />
               ))}
+              
+              {/* Loading Message */}
+              {isWaitingForResponse && <LoadingMessageBubble />}
             </ScrollView>
 
             {/* Input Area */}
