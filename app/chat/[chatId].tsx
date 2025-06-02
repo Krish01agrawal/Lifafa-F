@@ -1,5 +1,5 @@
 import { Ionicons } from '@expo/vector-icons';
-import { router, useLocalSearchParams } from 'expo-router';
+import { useLocalSearchParams } from 'expo-router';
 import React, { useEffect, useRef, useState } from 'react';
 import {
   KeyboardAvoidingView,
@@ -10,6 +10,11 @@ import {
   TouchableOpacity,
   View
 } from 'react-native';
+import Animated, {
+  useAnimatedStyle,
+  useSharedValue,
+  withTiming
+} from 'react-native-reanimated';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Config, log, logError } from '../../constants/Config';
 import { AUTH_KEYS, storage } from '../../utils/storage';
@@ -28,8 +33,13 @@ export default function ChatScreen() {
   const [messages, setMessages] = useState<Message[]>([]);
   const [inputText, setInputText] = useState('');
   const [connectionStatus, setConnectionStatus] = useState<ConnectionStatus>('disconnected');
+  const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
   const scrollViewRef = useRef<ScrollView>(null);
   const wsRef = useRef<WebSocket | null>(null);
+  
+  // Animation values
+  const sidebarWidth = useSharedValue(320); // 80 * 4 = 320px (w-80)
+  const sidebarOpacity = useSharedValue(1);
 
   // Create WebSocket URL from API URL
   const getWebSocketUrl = (chatId: string) => {
@@ -151,12 +161,13 @@ export default function ChatScreen() {
     };
   }, [chatId]);
 
-  const handleGoBack = () => {
-    // Close WebSocket before navigating back
-    if (wsRef.current) {
-      wsRef.current.close();
-    }
-    router.back();
+  const toggleSidebar = () => {
+    const newCollapsedState = !isSidebarCollapsed;
+    setIsSidebarCollapsed(newCollapsedState);
+    
+    // Animate sidebar
+    sidebarWidth.value = withTiming(newCollapsedState ? 0 : 320, { duration: 300 });
+    sidebarOpacity.value = withTiming(newCollapsedState ? 0 : 1, { duration: 200 });
   };
 
   const sendMessage = () => {
@@ -233,8 +244,19 @@ export default function ChatScreen() {
     </View>
   );
 
+  // Animated styles
+  const animatedSidebarStyle = useAnimatedStyle(() => {
+    return {
+      width: sidebarWidth.value,
+      opacity: sidebarOpacity.value,
+    };
+  });
+
   const Sidebar = () => (
-    <View className="w-80 bg-gray-900 border-r border-gray-800">
+    <Animated.View 
+      style={animatedSidebarStyle}
+      className="bg-gray-900 border-r border-gray-800 overflow-hidden"
+    >
       {/* Sidebar Header */}
       <View className="px-4 py-3 border-b border-gray-800">
         <Text className="text-white text-lg font-semibold">
@@ -248,13 +270,13 @@ export default function ChatScreen() {
           Sidebar content will go here
         </Text>
       </ScrollView>
-    </View>
+    </Animated.View>
   );
 
   return (
     <SafeAreaView className="flex-1 bg-black">
       <View className="flex-1 flex-row">
-        {/* Sidebar */}
+        {/* Animated Sidebar */}
         <Sidebar />
         
         {/* Main Chat Area */}
@@ -262,10 +284,14 @@ export default function ChatScreen() {
           {/* Header */}
           <View className="flex-row items-center justify-between px-4 py-3 border-b border-gray-800">
             <TouchableOpacity
-              onPress={handleGoBack}
+              onPress={toggleSidebar}
               className="flex-row items-center"
             >
-              <Ionicons name="chevron-back" size={28} color="#3B82F6" />
+              <Ionicons 
+                name={isSidebarCollapsed ? "chevron-forward" : "chevron-back"} 
+                size={28} 
+                color="#3B82F6" 
+              />
             </TouchableOpacity>
             
             <View className="flex-1 items-center">
