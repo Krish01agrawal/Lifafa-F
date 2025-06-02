@@ -168,44 +168,170 @@ export default function HomeScreen() {
               {!isGmailSynced ? (
                 <AppleProgressRing>
                   {userProfile.picture ? (
-                    <Image 
-                      source={{ uri: userProfile.picture }}
-                      className="w-20 h-20 rounded-full"
-                      style={{
-                        borderWidth: 3,
-                        borderColor: '#007AFF',
-                      }}
-                    />
+                    <View className="relative items-center justify-center">
+                      {/* Glow Layers */}
+                      <View 
+                        className="absolute w-28 h-28 rounded-full bg-blue-500"
+                        style={{
+                          opacity: 0.1,
+                          top: -16,
+                          left: -16,
+                        }}
+                      />
+                      <View 
+                        className="absolute w-24 h-24 rounded-full bg-blue-500"
+                        style={{
+                          opacity: 0.2,
+                          top: -8,
+                          left: -8,
+                        }}
+                      />
+                      <View 
+                        className="absolute rounded-full bg-blue-500"
+                        style={{
+                          opacity: 0.3,
+                          top: -4,
+                          left: -4,
+                          width: 88,
+                          height: 88,
+                        }}
+                      />
+                      {/* Profile Image */}
+                      <Image 
+                        source={{ uri: userProfile.picture }}
+                        className="w-20 h-20 rounded-full"
+                        style={{
+                          borderWidth: 3,
+                          borderColor: '#007AFF',
+                        }}
+                      />
+                    </View>
                   ) : (
-                    <View className="w-20 h-20 rounded-full bg-gray-800 items-center justify-center">
-                      <Text className="text-white font-semibold text-2xl">
-                        {userProfile.name.charAt(0).toUpperCase()}
-                      </Text>
+                    <View className="relative items-center justify-center">
+                      {/* Glow Layers */}
+                      <View 
+                        className="absolute w-28 h-28 rounded-full bg-blue-500"
+                        style={{
+                          opacity: 0.1,
+                          top: -16,
+                          left: -16,
+                        }}
+                      />
+                      <View 
+                        className="absolute w-24 h-24 rounded-full bg-blue-500"
+                        style={{
+                          opacity: 0.2,
+                          top: -8,
+                          left: -8,
+                        }}
+                      />
+                      <View 
+                        className="absolute rounded-full bg-blue-500"
+                        style={{
+                          opacity: 0.3,
+                          top: -4,
+                          left: -4,
+                          width: 88,
+                          height: 88,
+                        }}
+                      />
+                      {/* Avatar */}
+                      <View 
+                        className="w-20 h-20 rounded-full bg-gray-800 items-center justify-center"
+                        style={{
+                          borderWidth: 3,
+                          borderColor: '#007AFF',
+                        }}
+                      >
+                        <Text className="text-white font-semibold text-2xl">
+                          {userProfile.name.charAt(0).toUpperCase()}
+                        </Text>
+                      </View>
                     </View>
                   )}
                 </AppleProgressRing>
               ) : (
                 // Static profile picture when synced
                 userProfile.picture ? (
-                  <Image 
-                    source={{ uri: userProfile.picture }}
-                    className="w-24 h-24 rounded-full mb-6"
-                    style={{
-                      borderWidth: 3,
-                      borderColor: '#10B981',
-                    }}
-                  />
+                  <View className="relative mb-6 items-center justify-center">
+                    {/* Glow Layers */}
+                    <View 
+                      className="absolute w-32 h-32 rounded-full bg-green-500"
+                      style={{
+                        opacity: 0.15,
+                        top: -16,
+                        left: -16,
+                      }}
+                    />
+                    <View 
+                      className="absolute w-28 h-28 rounded-full bg-green-500"
+                      style={{
+                        opacity: 0.25,
+                        top: -8,
+                        left: -8,
+                      }}
+                    />
+                    <View 
+                      className="absolute rounded-full bg-green-500"
+                      style={{
+                        opacity: 0.35,
+                        top: -4,
+                        left: -4,
+                        width: 104,
+                        height: 104,
+                      }}
+                    />
+                    {/* Profile Image */}
+                    <Image 
+                      source={{ uri: userProfile.picture }}
+                      className="w-24 h-24 rounded-full"
+                      style={{
+                        borderWidth: 3,
+                        borderColor: '#10B981',
+                      }}
+                    />
+                  </View>
                 ) : (
-                  <View 
-                    className="w-24 h-24 rounded-full bg-gray-800 items-center justify-center mb-6"
-                    style={{
-                      borderWidth: 3,
-                      borderColor: '#10B981',
-                    }}
-                  >
-                    <Text className="text-white font-semibold text-2xl">
-                      {userProfile.name.charAt(0).toUpperCase()}
-                    </Text>
+                  <View className="relative mb-6 items-center justify-center">
+                    {/* Glow Layers */}
+                    <View 
+                      className="absolute w-32 h-32 rounded-full bg-green-500"
+                      style={{
+                        opacity: 0.15,
+                        top: -16,
+                        left: -16,
+                      }}
+                    />
+                    <View 
+                      className="absolute w-28 h-28 rounded-full bg-green-500"
+                      style={{
+                        opacity: 0.25,
+                        top: -8,
+                        left: -8,
+                      }}
+                    />
+                    <View 
+                      className="absolute rounded-full bg-green-500"
+                      style={{
+                        opacity: 0.35,
+                        top: -4,
+                        left: -4,
+                        width: 104,
+                        height: 104,
+                      }}
+                    />
+                    {/* Avatar */}
+                    <View 
+                      className="w-24 h-24 rounded-full bg-gray-800 items-center justify-center"
+                      style={{
+                        borderWidth: 3,
+                        borderColor: '#10B981',
+                      }}
+                    >
+                      <Text className="text-white font-semibold text-2xl">
+                        {userProfile.name.charAt(0).toUpperCase()}
+                      </Text>
+                    </View>
                   </View>
                 )
               )}
