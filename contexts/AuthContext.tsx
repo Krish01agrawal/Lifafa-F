@@ -29,7 +29,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [isLoading, setIsLoading] = useState(true);
   const [authError, setAuthError] = useState<string | null>(null);
 
-  const isAuthenticated = !!user && !!token;
+  const isAuthenticated = !!token;
 
   const clearAuthError = () => {
     setAuthError(null);
@@ -49,6 +49,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           if ('error' in oauthResult) {
             log('OAuth error detected', { error: oauthResult.error });
             setAuthError(oauthResult.error);
+            setIsLoading(false);
             return;
           }
           
@@ -59,6 +60,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           });
           await handleAuthSuccess(oauthResult.token, oauthResult.user);
           log('OAuth callback processing completed, user should be logged in');
+          setIsLoading(false);
           return;
         }
 
@@ -186,20 +188,28 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   // Logout
   const logout = async () => {
     try {
+      log('Starting logout process...');
       setIsLoading(true);
       
       if (token) {
+        log('Calling API logout...');
         await authApi.logout(token);
+        log('API logout completed');
+      } else {
+        log('No token present, skipping API logout');
       }
       
+      log('Clearing local auth data...');
       await clearAuth();
-      log('Logout completed');
+      log('Logout completed successfully');
     } catch (error) {
       logError('Error during logout', error);
       // Clear local auth even if API call fails
+      log('Clearing local auth data after error...');
       await clearAuth();
     } finally {
       setIsLoading(false);
+      log('Logout process finished, loading set to false');
     }
   };
 

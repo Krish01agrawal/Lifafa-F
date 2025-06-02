@@ -37,13 +37,13 @@ export const UserProfileProvider: React.FC<UserProfileProviderProps> = ({ childr
     }
   }, [isError, error]);
 
-  // Refetch on authentication state changes
-  useEffect(() => {
-    if (isAuthenticated && token) {
-      log('Authentication detected, ensuring user profile is fresh...');
-      refetch();
-    }
-  }, [isAuthenticated, token, refetch]);
+  // Refetch on authentication state changes - remove aggressive refetching
+  // useEffect(() => {
+  //   if (isAuthenticated && token) {
+  //     log('Authentication detected, ensuring user profile is fresh...');
+  //     refetch();
+  //   }
+  // }, [isAuthenticated, token, refetch]);
 
   // This component doesn't render anything, it just manages user profile fetching
   return <>{children}</>;

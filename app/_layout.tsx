@@ -4,7 +4,7 @@ import { useFonts } from 'expo-font';
 import { router, Slot, usePathname } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
 import { StatusBar } from 'expo-status-bar';
-import React, { useEffect } from 'react';
+import React, { useEffect, useRef } from 'react';
 import { ActivityIndicator, View } from 'react-native';
 import 'react-native-reanimated';
 import { ToastProvider, useToast } from '../components/ui/ToastContainer';
@@ -28,6 +28,7 @@ function AuthGuard({ children }: { children: React.ReactNode }) {
   const { isAuthenticated, isLoading, authError, clearAuthError } = useAuth();
   const { showError } = useToast();
   const pathname = usePathname();
+  const hasRedirectedRef = useRef<boolean>(false);
 
   // Handle auth errors with toast notifications
   useEffect(() => {
@@ -60,14 +61,18 @@ function AuthGuard({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     if (!isLoading) {
-      if (!isAuthenticated) {
-        // Only redirect to auth if user is not authenticated
-        router.replace('/(auth)' as any);
+      if (!isAuthenticated && !pathname.startsWith('/(auth)')) {
+        if (!hasRedirectedRef.current) {
+          console.log('AuthGuard: Redirecting to auth from:', pathname);
+          hasRedirectedRef.current = true;
+          router.replace('/(auth)');
+        }
+      } else if (isAuthenticated) {
+        // Reset redirect flag when user becomes authenticated
+        hasRedirectedRef.current = false;
       }
-      // If authenticated, let the user stay on their current route
-      // No need to redirect to home - let them access whatever route they're on
     }
-  }, [isAuthenticated, isLoading]);
+  }, [isAuthenticated, isLoading, pathname]);
 
   if (isLoading) {
     return (
@@ -77,16 +82,17 @@ function AuthGuard({ children }: { children: React.ReactNode }) {
     );
   }
 
-  // Only render children if authenticated, otherwise let the redirect happen
-  if (!isAuthenticated) {
-    return null;
+  // If user is authenticated, render protected content
+  if (isAuthenticated) {
+    return (
+      <UserProfileProvider>
+        {children}
+      </UserProfileProvider>
+    );
   }
 
-  return (
-    <UserProfileProvider>
-      {children}
-    </UserProfileProvider>
-  );
+  // If user is not authenticated, render the auth routes (login screen)
+  return <>{children}</>;
 }
 
 export default function RootLayout() {
