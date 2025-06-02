@@ -18,15 +18,9 @@ import Animated, {
 } from 'react-native-reanimated';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Config, log, logError } from '../../constants/Config';
+import { ChatMessage, useChat } from '../../hooks/useChatCache';
 import { useUserProfile } from '../../hooks/useUserProfile';
 import { AUTH_KEYS, storage } from '../../utils/storage';
-
-interface Message {
-  id: string;
-  text: string;
-  isUser: boolean;
-  timestamp: Date;
-}
 
 type ConnectionStatus = 'connecting' | 'connected' | 'ready' | 'disconnected' | 'error';
 
@@ -152,9 +146,6 @@ const SidebarComponent = React.memo(({
         {[
           { titleClass: 'w-3/4', line1Class: 'w-11/12', line2Class: 'w-2/3', timeClass: 'w-1/3', unread: false },
           { titleClass: 'w-4/5', line1Class: 'w-5/6', line2Class: 'w-3/5', timeClass: 'w-2/5', unread: true },
-          // { titleClass: 'w-2/3', line1Class: 'w-11/12', line2Class: 'w-1/2', timeClass: 'w-1/3', unread: false },
-          // { titleClass: 'w-3/4', line1Class: 'w-5/6', line2Class: 'w-3/5', timeClass: 'w-2/5', unread: false },
-          // { titleClass: 'w-2/3', line1Class: 'w-5/6', line2Class: 'w-2/3', timeClass: 'w-1/3', unread: false }
         ].map((item, index) => (
           <TouchableOpacity 
             key={index}
@@ -203,176 +194,95 @@ const SidebarComponent = React.memo(({
           </TouchableOpacity>
         ))}
       </View>
-
-      {/* Coming Soon Notice */}
-      <View className="px-3 py-6">
-        <View className="bg-amber-600/10 border border-amber-600/20 rounded-xl p-4 items-center">
-          <Ionicons name="time-outline" size={24} color="#F59E0B" />
-          <Text className="text-amber-400 font-medium text-sm mt-2 mb-1">
-            Coming Soon
-          </Text>
-          <Text className="text-amber-300/80 text-xs text-center leading-4">
-            Chat history and management features are currently in development
-          </Text>
-        </View>
-      </View>
     </ScrollView>
   </Animated.View>
 ));
 
-// Create a separate component for the chat area to isolate input state
-const ChatArea = React.memo(({ 
-  messages, 
-  connectionStatus, 
-  isWaitingForResponse,
-  inputText,
-  setInputText,
-  sendMessage,
-  connectWebSocket,
-  scrollViewRef,
-  MessageBubble,
-  LoadingMessageBubble,
-  getConnectionStatusColor,
-  getConnectionStatusText,
-  toggleSidebar,
-  isSidebarCollapsed
-}: {
-  messages: Message[];
-  connectionStatus: ConnectionStatus;
-  isWaitingForResponse: boolean;
-  inputText: string;
-  setInputText: (text: string) => void;
-  sendMessage: () => void;
-  connectWebSocket: () => void;
-  scrollViewRef: React.RefObject<ScrollView | null>;
-  MessageBubble: React.ComponentType<{ message: Message }>;
-  LoadingMessageBubble: React.ComponentType;
-  getConnectionStatusColor: () => string;
-  getConnectionStatusText: () => string;
-  toggleSidebar: () => void;
-  isSidebarCollapsed: boolean;
+// Enhanced Message Component with status indicators
+const MessageBubble = React.memo(({ 
+  message, 
+  formatTime 
+}: { 
+  message: ChatMessage; 
+  formatTime: (date: Date) => string;
 }) => (
-  <View className="flex-1">
-    {/* Header */}
-    <View className="flex-row items-center justify-between px-4 py-3 border-b border-gray-800">
-      <TouchableOpacity
-        onPress={toggleSidebar}
-        className="flex-row items-center"
-      >
-        <Ionicons 
-          name={isSidebarCollapsed ? "chevron-forward" : "chevron-back"} 
-          size={28} 
-          color="#3B82F6" 
-        />
-      </TouchableOpacity>
+  <View className={`flex-row mb-4 ${message.isUser ? 'justify-end' : 'justify-start'}`}>
+    <View className={`${message.isUser ? 'max-w-xs' : 'max-w-lg'} px-4 py-3 rounded-2xl ${
+      message.isUser 
+        ? 'bg-blue-600 rounded-br-md' 
+        : 'bg-blue-600/20 rounded-bl-md'
+    }`}>
+      <Text className={`text-base leading-relaxed ${
+        message.isUser ? 'text-white' : 'text-gray-400'
+      }`}>
+        {message.text}
+      </Text>
       
-      <View className="flex-1 items-center">
-        <Text className="text-white text-lg font-semibold">
-          AI Assistant
+      <View className="flex-row items-center justify-between mt-2">
+        <Text className={`text-xs ${
+          message.isUser ? 'text-blue-200' : 'text-gray-500'
+        }`}>
+          {formatTime(message.timestamp)}
         </Text>
-        <View className="flex-row items-center">
-          <View 
-            className="w-2 h-2 rounded-full mr-2"
-            style={{ backgroundColor: getConnectionStatusColor() }}
-          />
-          <Text className="text-gray-400 text-sm">
-            {getConnectionStatusText()}
-          </Text>
-        </View>
-      </View>
-      
-      <TouchableOpacity 
-        onPress={connectWebSocket}
-        className="p-2"
-      >
-        <Ionicons 
-          name="refresh" 
-          size={24} 
-          color={connectionStatus === 'ready' ? '#10B981' : '#3B82F6'} 
-        />
-      </TouchableOpacity>
-    </View>
-
-    <KeyboardAvoidingView 
-      className="flex-1"
-      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-      keyboardVerticalOffset={Platform.OS === 'ios' ? 90 : 0}
-    >
-      {/* Messages */}
-      <ScrollView
-        ref={scrollViewRef}
-        className="flex-1 px-4 py-4"
-        showsVerticalScrollIndicator={false}
-        onContentSizeChange={() => {
-          scrollViewRef.current?.scrollToEnd({ animated: true });
-        }}
-      >
-        {messages.map((message) => (
-          <MessageBubble key={message.id} message={message} />
-        ))}
         
-        {/* Loading Message */}
-        {isWaitingForResponse && <LoadingMessageBubble />}
-      </ScrollView>
-
-      {/* Input Area */}
-      <View className="px-4 py-3 border-t border-gray-800">
-        <View className="flex-row items-end bg-gray-800 rounded-3xl px-4 py-2">
-          <TouchableOpacity className="mr-3 mb-1">
-            <Ionicons name="add-circle" size={28} color="#3B82F6" />
-          </TouchableOpacity>
-          
-          <TextInput
-            className="flex-1 text-white text-base py-2 max-h-24"
-            placeholder={connectionStatus === 'ready' ? 'Message' : 'Connecting...'}
-            placeholderTextColor="#6B7280"
-            value={inputText}
-            onChangeText={setInputText}
-            multiline
-            textAlignVertical="top"
-            editable={connectionStatus === 'ready'}
-            style={{ 
-              fontSize: 16,
-              borderWidth: 0,
-              outline: 'none',
-            }}
-            onKeyPress={(e) => {
-              if (e.nativeEvent.key === 'Enter') {
-                // For now, just send on Enter press
-                // In React Native, detecting Shift+Enter is complex, so we'll use Enter to send
-                e.preventDefault();
-                sendMessage();
-              }
-            }}
-          />
-          
-          {inputText.trim() && connectionStatus === 'ready' ? (
-            <TouchableOpacity
-              onPress={sendMessage}
-              className="ml-3 mb-1"
-            >
-              <View className="w-8 h-8 bg-blue-600 rounded-full items-center justify-center">
-                <Ionicons name="arrow-up" size={18} color="white" />
-              </View>
-            </TouchableOpacity>
-          ) : (
-            <TouchableOpacity className="ml-3 mb-1">
-              <Ionicons 
-                name="mic" 
-                size={28} 
-                color={connectionStatus === 'ready' ? '#3B82F6' : '#6B7280'} 
-              />
-            </TouchableOpacity>
-          )}
-        </View>
+        {/* Message Status Indicator */}
+        {message.isUser && (
+          <View className="ml-2">
+            {message.status === 'sending' && (
+              <Ionicons name="time-outline" size={12} color="#93C5FD" />
+            )}
+            {message.status === 'sent' && (
+              <Ionicons name="checkmark" size={12} color="#93C5FD" />
+            )}
+            {message.status === 'delivered' && (
+              <Ionicons name="checkmark-done" size={12} color="#93C5FD" />
+            )}
+            {message.status === 'failed' && (
+              <Ionicons name="alert-circle" size={12} color="#F87171" />
+            )}
+          </View>
+        )}
       </View>
-    </KeyboardAvoidingView>
+    </View>
   </View>
 ));
 
+// Loading Message Component
+const LoadingMessageBubble = React.memo(() => {
+  const [dotCount, setDotCount] = useState(1);
+  
+  useEffect(() => {
+    const animateDots = () => {
+      setDotCount(prev => prev >= 3 ? 1 : prev + 1);
+    };
+    
+    const interval = setInterval(animateDots, 500);
+    return () => clearInterval(interval);
+  }, []);
+
+  return (
+    <View className="mb-4 items-start">
+      <View className="bg-gray-800 rounded-2xl rounded-bl-md px-4 py-3 border border-gray-700">
+        <View className="flex-row items-center">
+          <View className="flex-row mr-2">
+            {[1, 2, 3].map((dot) => (
+              <View
+                key={dot}
+                className={`w-2 h-2 rounded-full mx-0.5 ${
+                  dot <= dotCount ? 'bg-blue-400' : 'bg-gray-600'
+                }`}
+              />
+            ))}
+          </View>
+          <Text className="text-gray-400 text-sm">AI is typing</Text>
+        </View>
+      </View>
+    </View>
+  );
+});
+
 export default function ChatScreen() {
   const { chatId } = useLocalSearchParams<{ chatId: string }>();
-  const [messages, setMessages] = useState<Message[]>([]);
   const [inputText, setInputText] = useState('');
   const [connectionStatus, setConnectionStatus] = useState<ConnectionStatus>('disconnected');
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
@@ -380,12 +290,31 @@ export default function ChatScreen() {
   const scrollViewRef = useRef<ScrollView>(null);
   const wsRef = useRef<WebSocket | null>(null);
   
+  // Use elegant chat caching system
+  const {
+    messages,
+    addMessage,
+    addAIResponse,
+    updateMessageStatus,
+    initializeChat,
+    metadata,
+    isLoading: isChatLoading,
+    isAddingMessage
+  } = useChat(chatId as string);
+  
   // Get user profile from TanStack Query cache
   const { data: userProfile } = useUserProfile();
   
   // Animation values
   const sidebarWidth = useSharedValue(320); // 80 * 4 = 320px (w-80)
   const sidebarOpacity = useSharedValue(1);
+
+  // Initialize chat on mount
+  useEffect(() => {
+    if (chatId) {
+      initializeChat(`Chat ${new Date().toLocaleString()}`);
+    }
+  }, [chatId, initializeChat]);
 
   // Create WebSocket URL from API URL
   const getWebSocketUrl = useCallback((chatId: string) => {
@@ -423,19 +352,12 @@ export default function ChatScreen() {
           if (jwtToken) {
             log('Sending authentication...');
             ws.send(JSON.stringify({ jwt_token: jwtToken }));
-            
-            // Set status to ready immediately after sending auth
             setConnectionStatus('ready');
             
-            // Add welcome message
-            const welcomeMessage: Message = {
-              id: 'welcome-' + Date.now(),
-              text: 'Hello! I\'m your AI assistant. How can I help you with your emails today?',
-              isUser: false,
-              timestamp: new Date(),
-            };
-            setMessages([welcomeMessage]);
-            
+            // Add welcome message only if no messages exist
+            if (messages.length === 0) {
+              await addAIResponse('Hello! I\'m your AI assistant. How can I help you with your emails today?');
+            }
           } else {
             logError('No JWT token found for authentication');
             setConnectionStatus('error');
@@ -446,36 +368,23 @@ export default function ChatScreen() {
         }
       };
 
-      ws.onmessage = (event) => {
+      ws.onmessage = async (event) => {
         try {
           const data = JSON.parse(event.data);
           log('Received WebSocket message:', data);
 
-          // Hide loading state when response arrives
           setIsWaitingForResponse(false);
 
           // Handle the new message format with reply array
           if (data.message && data.message.reply && Array.isArray(data.message.reply)) {
             const replyText = data.message.reply[0]; // Get the first reply from array
             if (replyText) {
-              const newMessage: Message = {
-                id: 'ai-' + Date.now(),
-                text: replyText,
-                isUser: false,
-                timestamp: new Date(),
-              };
-              setMessages(prev => [...prev, newMessage]);
+              await addAIResponse(replyText);
             }
           }
           // Fallback for simple message format (for backward compatibility)
           else if (data.message && typeof data.message === 'string') {
-            const newMessage: Message = {
-              id: 'ai-' + Date.now(),
-              text: data.message,
-              isUser: false,
-              timestamp: new Date(),
-            };
-            setMessages(prev => [...prev, newMessage]);
+            await addAIResponse(data.message);
           }
         } catch (error) {
           logError('Error parsing WebSocket message:', error);
@@ -497,7 +406,7 @@ export default function ChatScreen() {
       logError('Error connecting to WebSocket:', error);
       setConnectionStatus('error');
     }
-  }, [chatId, getWebSocketUrl]);
+  }, [chatId, getWebSocketUrl, messages.length, addAIResponse]);
 
   useEffect(() => {
     connectWebSocket();
@@ -511,6 +420,15 @@ export default function ChatScreen() {
     };
   }, [connectWebSocket]);
 
+  // Auto-scroll to bottom when messages change
+  useEffect(() => {
+    if (scrollViewRef.current) {
+      setTimeout(() => {
+        scrollViewRef.current?.scrollToEnd({ animated: true });
+      }, 100);
+    }
+  }, [messages]);
+
   const toggleSidebar = useCallback(() => {
     const newCollapsedState = !isSidebarCollapsed;
     setIsSidebarCollapsed(newCollapsedState);
@@ -520,33 +438,43 @@ export default function ChatScreen() {
     sidebarOpacity.value = withTiming(newCollapsedState ? 0 : 1, { duration: 200 });
   }, [isSidebarCollapsed, sidebarWidth, sidebarOpacity]);
 
-  const sendMessage = useCallback(() => {
+  const sendMessage = useCallback(async () => {
     if (inputText.trim() === '' || connectionStatus !== 'ready') return;
 
     const messageText = inputText.trim();
-    
-    // Add user message to UI immediately
-    const userMessage: Message = {
-      id: 'user-' + Date.now(),
-      text: messageText,
-      isUser: true,
-      timestamp: new Date(),
-    };
-    setMessages(prev => [...prev, userMessage]);
     setInputText('');
     
-    // Show loading state
-    setIsWaitingForResponse(true);
+    try {
+      // Add user message with optimistic update
+      const userMessage = await addMessage({
+        text: messageText,
+        isUser: true,
+        timestamp: new Date(),
+        status: 'sending',
+      });
+      
+      setIsWaitingForResponse(true);
 
-    // Send message via WebSocket
-    if (wsRef.current && wsRef.current.readyState === WebSocket.OPEN) {
-      wsRef.current.send(JSON.stringify({ 
-        message: messageText,
-        timestamp: new Date().toISOString()
-      }));
-      log('Sent message:', messageText);
+      // Send message via WebSocket
+      if (wsRef.current && wsRef.current.readyState === WebSocket.OPEN) {
+        wsRef.current.send(JSON.stringify({ 
+          message: messageText,
+          timestamp: new Date().toISOString()
+        }));
+        
+        // Update message status to sent
+        await updateMessageStatus(userMessage.id, 'sent');
+        log('Sent message:', messageText);
+      } else {
+        // Update message status to failed if WebSocket is not ready
+        await updateMessageStatus(userMessage.id, 'failed');
+        setIsWaitingForResponse(false);
+      }
+    } catch (error) {
+      logError('Error sending message:', error);
+      setIsWaitingForResponse(false);
     }
-  }, [inputText, connectionStatus]);
+  }, [inputText, connectionStatus, addMessage, updateMessageStatus]);
 
   const formatTime = useCallback((date: Date) => {
     return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
@@ -574,60 +502,6 @@ export default function ChatScreen() {
     }
   }, [connectionStatus]);
 
-  const MessageBubble = useMemo(() => React.memo(({ message }: { message: Message }) => (
-    <View className={`mb-4 ${message.isUser ? 'items-end' : 'items-start'}`}>
-      <View 
-        className={`px-4 py-3 rounded-2xl ${
-          message.isUser
-            ? 'bg-blue-600 rounded-br-md max-w-[80%]'
-            : 'bg-gray-900 rounded-bl-md max-w-[70%]'
-        }`}
-      >
-        <Text className={`text-base leading-5 ${message.isUser ? 'text-white' : 'text-gray-300'}`}>
-          {message.text}
-        </Text>
-        {!message.isUser && (
-          <Text className="text-gray-400 text-xs mt-2">
-            {formatTime(message.timestamp)}
-          </Text>
-        )}
-      </View>
-    </View>
-  )), [formatTime]);
-
-  const LoadingMessageBubble = useMemo(() => React.memo(() => {
-    const [dotCount, setDotCount] = useState(1);
-    
-    useEffect(() => {
-      const animateDots = () => {
-        setDotCount(prev => prev >= 3 ? 1 : prev + 1);
-      };
-      
-      const interval = setInterval(animateDots, 500);
-      return () => clearInterval(interval);
-    }, []);
-
-    return (
-      <View className="mb-4 items-start">
-        <View className="bg-gray-800 rounded-2xl rounded-bl-md px-4 py-3 border border-gray-700">
-          <View className="flex-row items-center">
-            <View className="flex-row mr-2">
-              {[1, 2, 3].map((dot) => (
-                <View
-                  key={dot}
-                  className={`w-2 h-2 rounded-full mx-0.5 ${
-                    dot <= dotCount ? 'bg-blue-400' : 'bg-gray-600'
-                  }`}
-                />
-              ))}
-            </View>
-            <Text className="text-gray-400 text-sm">AI is typing</Text>
-          </View>
-        </View>
-      </View>
-    );
-  }), []);
-
   // Memoize the animated sidebar style to avoid recalculations
   const animatedSidebarStyle = useAnimatedStyle(() => {
     return {
@@ -644,39 +518,6 @@ export default function ChatScreen() {
     />
   ), [animatedSidebarStyle, userProfile]);
 
-  // Memoize chat area to prevent rerenders when sidebar state changes
-  const MemoizedChatArea = useMemo(() => (
-    <ChatArea
-      messages={messages}
-      connectionStatus={connectionStatus}
-      isWaitingForResponse={isWaitingForResponse}
-      inputText={inputText}
-      setInputText={setInputText}
-      sendMessage={sendMessage}
-      connectWebSocket={connectWebSocket}
-      scrollViewRef={scrollViewRef}
-      MessageBubble={MessageBubble}
-      LoadingMessageBubble={LoadingMessageBubble}
-      getConnectionStatusColor={getConnectionStatusColor}
-      getConnectionStatusText={getConnectionStatusText}
-      toggleSidebar={toggleSidebar}
-      isSidebarCollapsed={isSidebarCollapsed}
-    />
-  ), [
-    messages, 
-    connectionStatus, 
-    isWaitingForResponse, 
-    inputText, 
-    sendMessage, 
-    connectWebSocket, 
-    MessageBubble, 
-    LoadingMessageBubble, 
-    getConnectionStatusColor, 
-    getConnectionStatusText, 
-    toggleSidebar, 
-    isSidebarCollapsed
-  ]);
-
   return (
     <SafeAreaView className="flex-1 bg-black">
       <View className="flex-1 flex-row">
@@ -684,7 +525,124 @@ export default function ChatScreen() {
         {MemoizedSidebar}
         
         {/* Main Chat Area */}
-        {MemoizedChatArea}
+        <View className="flex-1">
+          {/* Header */}
+          <View className="flex-row items-center justify-between px-4 py-3 border-b border-gray-800">
+            <TouchableOpacity
+              onPress={toggleSidebar}
+              className="flex-row items-center"
+            >
+              <Ionicons 
+                name={isSidebarCollapsed ? "chevron-forward" : "chevron-back"} 
+                size={28} 
+                color="#3B82F6" 
+              />
+            </TouchableOpacity>
+            
+            <View className="flex-1 items-center">
+              <Text className="text-white text-lg font-semibold">
+                AI Assistant
+              </Text>
+              <View className="flex-row items-center">
+                <View 
+                  className="w-2 h-2 rounded-full mr-2"
+                  style={{ backgroundColor: getConnectionStatusColor() }}
+                />
+                <Text className="text-gray-400 text-sm">
+                  {getConnectionStatusText()}
+                </Text>
+              </View>
+            </View>
+            
+            <TouchableOpacity 
+              onPress={connectWebSocket}
+              className="p-2"
+            >
+              <Ionicons 
+                name="refresh" 
+                size={24} 
+                color={connectionStatus === 'ready' ? '#10B981' : '#3B82F6'} 
+              />
+            </TouchableOpacity>
+          </View>
+
+          <KeyboardAvoidingView 
+            className="flex-1"
+            behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+            keyboardVerticalOffset={Platform.OS === 'ios' ? 90 : 0}
+          >
+            {/* Messages */}
+            <ScrollView
+              ref={scrollViewRef}
+              className="flex-1 px-4 py-4"
+              showsVerticalScrollIndicator={false}
+              onContentSizeChange={() => {
+                scrollViewRef.current?.scrollToEnd({ animated: true });
+              }}
+            >
+              {messages.map((message) => (
+                <MessageBubble key={message.id} message={message} formatTime={formatTime} />
+              ))}
+              
+              {/* Loading Message */}
+              {isWaitingForResponse && (
+                <LoadingMessageBubble />
+              )}
+            </ScrollView>
+
+            {/* Input Area */}
+            <View className="px-4 py-3 border-t border-gray-800">
+              <View className="flex-row items-end bg-gray-800 rounded-3xl px-4 py-2">
+                <TouchableOpacity className="mr-3 mb-1">
+                  <Ionicons name="add-circle" size={28} color="#3B82F6" />
+                </TouchableOpacity>
+                
+                <TextInput
+                  className="flex-1 text-white text-base py-2 max-h-24"
+                  placeholder={connectionStatus === 'ready' ? 'Message' : 'Connecting...'}
+                  placeholderTextColor="#6B7280"
+                  value={inputText}
+                  onChangeText={setInputText}
+                  multiline
+                  textAlignVertical="top"
+                  editable={connectionStatus === 'ready'}
+                  style={{ 
+                    fontSize: 16,
+                    borderWidth: 0,
+                    outline: 'none',
+                  }}
+                  onKeyPress={(e) => {
+                    if (e.nativeEvent.key === 'Enter') {
+                      // For now, just send on Enter press
+                      // In React Native, detecting Shift+Enter is complex, so we'll use Enter to send
+                      e.preventDefault();
+                      sendMessage();
+                    }
+                  }}
+                />
+                
+                {inputText.trim() && connectionStatus === 'ready' ? (
+                  <TouchableOpacity
+                    onPress={sendMessage}
+                    className="ml-3 mb-1"
+                  >
+                    <View className="w-8 h-8 bg-blue-600 rounded-full items-center justify-center">
+                      <Ionicons name="arrow-up" size={18} color="white" />
+                    </View>
+                  </TouchableOpacity>
+                ) : (
+                  <TouchableOpacity className="ml-3 mb-1">
+                    <Ionicons 
+                      name="mic" 
+                      size={28} 
+                      color={connectionStatus === 'ready' ? '#3B82F6' : '#6B7280'} 
+                    />
+                  </TouchableOpacity>
+                )}
+              </View>
+            </View>
+          </KeyboardAvoidingView>
+        </View>
       </View>
     </SafeAreaView>
   );
