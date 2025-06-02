@@ -1,4 +1,5 @@
 import { Ionicons } from '@expo/vector-icons';
+import { LinearGradient } from 'expo-linear-gradient';
 import { useLocalSearchParams } from 'expo-router';
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
@@ -699,136 +700,142 @@ export default function ChatScreen() {
 
   return (
     <SafeAreaView className="flex-1 bg-black">
-      <View className="flex-1 flex-row">
-        {/* Animated Sidebar */}
-        {MemoizedSidebar}
-        
-        {/* Main Chat Area */}
-        <View className="flex-1">
-          {/* Header */}
-          <View className="flex-row items-center justify-between px-4 py-3 border-b border-gray-800">
-            <TouchableOpacity
-              onPress={toggleSidebar}
-              className="flex-row items-center"
-            >
-              <Ionicons 
-                name={isSidebarCollapsed ? "chevron-forward" : "chevron-back"} 
-                size={28} 
-                color="#3B82F6" 
-              />
-            </TouchableOpacity>
-            
-            <View className="flex-1 items-center">
-              <Text className="text-white text-lg font-semibold">
-                AI Assistant
-              </Text>
-              <View className="flex-row items-center">
-                <View 
-                  className="w-2 h-2 rounded-full mr-2"
-                  style={{ backgroundColor: getConnectionStatusColor() }}
+      <LinearGradient
+        colors={['#0F172A', '#1E293B', '#000000']}
+        locations={[0, 0.5, 1]}
+        style={{ flex: 1 }}
+      >
+        <View className="flex-1 flex-row">
+          {/* Animated Sidebar */}
+          {MemoizedSidebar}
+          
+          {/* Main Chat Area */}
+          <View className="flex-1">
+            {/* Header */}
+            <View className="flex-row items-center justify-between px-4 py-3 border-b border-gray-800">
+              <TouchableOpacity
+                onPress={toggleSidebar}
+                className="flex-row items-center"
+              >
+                <Ionicons 
+                  name={isSidebarCollapsed ? "chevron-forward" : "chevron-back"} 
+                  size={28} 
+                  color="#3B82F6" 
                 />
-                <Text className="text-gray-400 text-sm">
-                  {getConnectionStatusText()}
-                </Text>
-              </View>
-            </View>
-            
-            <TouchableOpacity 
-              onPress={connectWebSocket}
-              className="p-2"
-            >
-              <Ionicons 
-                name="refresh" 
-                size={24} 
-                color={connectionStatus === 'ready' ? '#10B981' : '#3B82F6'} 
-              />
-            </TouchableOpacity>
-          </View>
-
-          <KeyboardAvoidingView 
-            className="flex-1"
-            behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-            keyboardVerticalOffset={Platform.OS === 'ios' ? 90 : 0}
-          >
-            {/* Messages */}
-            <ScrollView
-              ref={scrollViewRef}
-              className="flex-1 px-4 py-4"
-              showsVerticalScrollIndicator={false}
-              onContentSizeChange={() => {
-                scrollViewRef.current?.scrollToEnd({ animated: true });
-              }}
-            >
-              {messages.map((message) => (
-                <MessageBubble key={message.id} message={message} formatTime={formatTime} />
-              ))}
+              </TouchableOpacity>
               
-              {/* Loading Message */}
-              {isWaitingForResponse && (
-                <LoadingMessageBubble />
-              )}
-            </ScrollView>
-
-            {/* Input Area */}
-            <View className="px-4 py-3 border-t border-gray-800">
-              <View className="flex-row items-end bg-gray-800 rounded-3xl px-4 py-2">
-                <TouchableOpacity className="mr-3 mb-1">
-                  <Ionicons name="add-circle" size={28} color="#3B82F6" />
-                </TouchableOpacity>
-                
-                <TextInput
-                  className="flex-1 text-white text-base py-2 max-h-24"
-                  placeholder={connectionStatus === 'ready' ? 'Message' : 'Connecting...'}
-                  placeholderTextColor="#6B7280"
-                  value={inputText}
-                  onChangeText={setInputText}
-                  multiline
-                  textAlignVertical="top"
-                  editable={connectionStatus === 'ready'}
-                  style={{ 
-                    fontSize: 16,
-                    borderWidth: 0,
-                    outline: 'none',
-                  }}
-                  onKeyPress={(e) => {
-                    if (e.nativeEvent.key === 'Enter') {
-                      // For now, just send on Enter press
-                      // In React Native, detecting Shift+Enter is complex, so we'll use Enter to send
-                      e.preventDefault();
-                      sendMessage();
-                    }
-                  }}
-                />
-                
-                {inputText.trim() && connectionStatus === 'ready' ? (
-                  <TouchableOpacity
-                    onPress={sendMessage}
-                    className="ml-3 mb-1"
-                  >
-                    <View className="w-8 h-8 bg-blue-600 rounded-full items-center justify-center">
-                      <Ionicons name="arrow-up" size={18} color="white" />
-                    </View>
-                  </TouchableOpacity>
-                ) : (
-                  <TouchableOpacity className="ml-3 mb-1">
-                    <Ionicons 
-                      name="mic" 
-                      size={28} 
-                      color={connectionStatus === 'ready' ? '#3B82F6' : '#6B7280'} 
-                    />
-                  </TouchableOpacity>
-                )}
+              <View className="flex-1 items-center">
+                <Text className="text-white text-lg font-semibold">
+                  AI Assistant
+                </Text>
+                <View className="flex-row items-center">
+                  <View 
+                    className="w-2 h-2 rounded-full mr-2"
+                    style={{ backgroundColor: getConnectionStatusColor() }}
+                  />
+                  <Text className="text-gray-400 text-sm">
+                    {getConnectionStatusText()}
+                  </Text>
+                </View>
               </View>
+              
+              <TouchableOpacity 
+                onPress={connectWebSocket}
+                className="p-2"
+              >
+                <Ionicons 
+                  name="refresh" 
+                  size={24} 
+                  color={connectionStatus === 'ready' ? '#10B981' : '#3B82F6'} 
+                />
+              </TouchableOpacity>
             </View>
-          </KeyboardAvoidingView>
-        </View>
-      </View>
 
-      {/* Search Modal */}
-      <SearchModal 
-        isVisible={isSearchModalVisible}
-        onClose={closeSearchModal}
-      />
+            <KeyboardAvoidingView 
+              className="flex-1"
+              behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+              keyboardVerticalOffset={Platform.OS === 'ios' ? 90 : 0}
+            >
+              {/* Messages */}
+              <ScrollView
+                ref={scrollViewRef}
+                className="flex-1 px-4 py-4"
+                showsVerticalScrollIndicator={false}
+                onContentSizeChange={() => {
+                  scrollViewRef.current?.scrollToEnd({ animated: true });
+                }}
+              >
+                {messages.map((message) => (
+                  <MessageBubble key={message.id} message={message} formatTime={formatTime} />
+                ))}
+                
+                {/* Loading Message */}
+                {isWaitingForResponse && (
+                  <LoadingMessageBubble />
+                )}
+              </ScrollView>
+
+              {/* Input Area */}
+              <View className="px-4 py-3 border-t border-gray-800">
+                <View className="flex-row items-end bg-gray-800 rounded-3xl px-4 py-2">
+                  <TouchableOpacity className="mr-3 mb-1">
+                    <Ionicons name="add-circle" size={28} color="#3B82F6" />
+                  </TouchableOpacity>
+                  
+                  <TextInput
+                    className="flex-1 text-white text-base py-2 max-h-24"
+                    placeholder={connectionStatus === 'ready' ? 'Message' : 'Connecting...'}
+                    placeholderTextColor="#6B7280"
+                    value={inputText}
+                    onChangeText={setInputText}
+                    multiline
+                    textAlignVertical="top"
+                    editable={connectionStatus === 'ready'}
+                    style={{ 
+                      fontSize: 16,
+                      borderWidth: 0,
+                      outline: 'none',
+                    }}
+                    onKeyPress={(e) => {
+                      if (e.nativeEvent.key === 'Enter') {
+                        // For now, just send on Enter press
+                        // In React Native, detecting Shift+Enter is complex, so we'll use Enter to send
+                        e.preventDefault();
+                        sendMessage();
+                      }
+                    }}
+                  />
+                  
+                  {inputText.trim() && connectionStatus === 'ready' ? (
+                    <TouchableOpacity
+                      onPress={sendMessage}
+                      className="ml-3 mb-1"
+                    >
+                      <View className="w-8 h-8 bg-blue-600 rounded-full items-center justify-center">
+                        <Ionicons name="arrow-up" size={18} color="white" />
+                      </View>
+                    </TouchableOpacity>
+                  ) : (
+                    <TouchableOpacity className="ml-3 mb-1">
+                      <Ionicons 
+                        name="mic" 
+                        size={28} 
+                        color={connectionStatus === 'ready' ? '#3B82F6' : '#6B7280'} 
+                      />
+                    </TouchableOpacity>
+                  )}
+                </View>
+              </View>
+            </KeyboardAvoidingView>
+          </View>
+        </View>
+
+        {/* Search Modal */}
+        <SearchModal 
+          isVisible={isSearchModalVisible}
+          onClose={closeSearchModal}
+        />
+      </LinearGradient>
     </SafeAreaView>
   );
 } 
