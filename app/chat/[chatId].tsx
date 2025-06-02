@@ -152,9 +152,9 @@ const SidebarComponent = React.memo(({
         {[
           { titleClass: 'w-3/4', line1Class: 'w-11/12', line2Class: 'w-2/3', timeClass: 'w-1/3', unread: false },
           { titleClass: 'w-4/5', line1Class: 'w-5/6', line2Class: 'w-3/5', timeClass: 'w-2/5', unread: true },
-          { titleClass: 'w-2/3', line1Class: 'w-11/12', line2Class: 'w-1/2', timeClass: 'w-1/3', unread: false },
-          { titleClass: 'w-3/4', line1Class: 'w-5/6', line2Class: 'w-3/5', timeClass: 'w-2/5', unread: false },
-          { titleClass: 'w-2/3', line1Class: 'w-5/6', line2Class: 'w-2/3', timeClass: 'w-1/3', unread: false }
+          // { titleClass: 'w-2/3', line1Class: 'w-11/12', line2Class: 'w-1/2', timeClass: 'w-1/3', unread: false },
+          // { titleClass: 'w-3/4', line1Class: 'w-5/6', line2Class: 'w-3/5', timeClass: 'w-2/5', unread: false },
+          // { titleClass: 'w-2/3', line1Class: 'w-5/6', line2Class: 'w-2/3', timeClass: 'w-1/3', unread: false }
         ].map((item, index) => (
           <TouchableOpacity 
             key={index}
