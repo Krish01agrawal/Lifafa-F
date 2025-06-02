@@ -217,32 +217,6 @@ const MessageBubble = React.memo(({
       }`}>
         {message.text}
       </Text>
-      
-      <View className="flex-row items-center justify-between mt-2">
-        <Text className={`text-xs ${
-          message.isUser ? 'text-blue-200' : 'text-gray-500'
-        }`}>
-          {formatTime(message.timestamp)}
-        </Text>
-        
-        {/* Message Status Indicator */}
-        {message.isUser && (
-          <View className="ml-2">
-            {message.status === 'sending' && (
-              <Ionicons name="time-outline" size={12} color="#93C5FD" />
-            )}
-            {message.status === 'sent' && (
-              <Ionicons name="checkmark" size={12} color="#93C5FD" />
-            )}
-            {message.status === 'delivered' && (
-              <Ionicons name="checkmark-done" size={12} color="#93C5FD" />
-            )}
-            {message.status === 'failed' && (
-              <Ionicons name="alert-circle" size={12} color="#F87171" />
-            )}
-          </View>
-        )}
-      </View>
     </View>
   </View>
 ));
