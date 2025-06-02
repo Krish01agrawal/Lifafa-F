@@ -195,6 +195,41 @@ const SidebarComponent = React.memo(({
         ))}
       </View>
     </ScrollView>
+    
+    {/* Features Incoming Section */}
+    <View className="px-4 py-4 border-t border-gray-800 bg-gray-900/80" style={{
+      borderTopWidth: 3,
+      borderTopColor: '#3B82F6',
+      borderTopLeftRadius: 12,
+      borderTopRightRadius: 12,
+    }}>
+      <View className="flex-row items-center mb-3">
+        <Ionicons name="rocket-outline" size={16} color="#FDE047" />
+        <Text className="text-yellow-100 font-semibold text-sm ml-2">
+          Features Incoming
+        </Text>
+      </View>
+      
+      <Text className="text-yellow-100 text-xs leading-4 mb-3">
+        We're working hard to bring you amazing new features:
+      </Text>
+      
+      <View className="space-y-2">
+        <View className="flex-row items-center">
+          <View className="w-1.5 h-1.5 bg-yellow-300 rounded-full mr-2" />
+          <Text className="text-yellow-100 text-xs">Chat history & persistence</Text>
+        </View>
+        <View className="flex-row items-center">
+          <View className="w-1.5 h-1.5 bg-yellow-300 rounded-full mr-2" />
+          <Text className="text-yellow-100 text-xs">Email search & filtering</Text>
+        </View>
+        <View className="flex-row items-center">
+          <View className="w-1.5 h-1.5 bg-yellow-300 rounded-full mr-2" />
+          <Text className="text-yellow-100 text-xs">Smart email categorization</Text>
+        </View>
+      </View>
+      
+    </View>
   </Animated.View>
 ));
 
@@ -213,7 +248,7 @@ const MessageBubble = React.memo(({
         : 'bg-blue-600/20 rounded-bl-md'
     }`}>
       <Text className={`text-base leading-relaxed ${
-        message.isUser ? 'text-white' : 'text-gray-400'
+        message.isUser ? 'text-white' : 'text-gray-100'
       }`}>
         {message.text}
       </Text>
