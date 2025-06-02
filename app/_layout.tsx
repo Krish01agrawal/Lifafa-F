@@ -1,7 +1,7 @@
 import { DarkTheme, ThemeProvider } from '@react-navigation/native';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { useFonts } from 'expo-font';
-import { router, Slot } from 'expo-router';
+import { router, Slot, usePathname } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
 import { StatusBar } from 'expo-status-bar';
 import React, { useEffect } from 'react';
@@ -26,6 +26,7 @@ const queryClient = new QueryClient({
 function AuthGuard({ children }: { children: React.ReactNode }) {
   const { isAuthenticated, isLoading, authError, clearAuthError } = useAuth();
   const { showError } = useToast();
+  const pathname = usePathname();
 
   // Handle auth errors with toast notifications
   useEffect(() => {
@@ -58,13 +59,12 @@ function AuthGuard({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     if (!isLoading) {
-      if (isAuthenticated) {
-        // User is authenticated, redirect to chat
-        router.replace('/');
-      } else {
-        // User is not authenticated, redirect to landing page
+      if (!isAuthenticated) {
+        // Only redirect to auth if user is not authenticated
         router.replace('/(auth)' as any);
       }
+      // If authenticated, let the user stay on their current route
+      // No need to redirect to home - let them access whatever route they're on
     }
   }, [isAuthenticated, isLoading]);
 
@@ -74,6 +74,11 @@ function AuthGuard({ children }: { children: React.ReactNode }) {
         <ActivityIndicator size="large" color="#3B82F6" />
       </View>
     );
+  }
+
+  // Only render children if authenticated, otherwise let the redirect happen
+  if (!isAuthenticated) {
+    return null;
   }
 
   return <>{children}</>;
