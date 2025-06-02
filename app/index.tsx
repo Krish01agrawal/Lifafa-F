@@ -50,10 +50,9 @@ const AppleProgressRing: React.FC<{ children: React.ReactNode }> = ({ children }
   }, []);
 
   const progressStyle = useAnimatedStyle(() => {
-    const strokeDashoffset = interpolate(progress.value, [0, 1], [314, 0]); // 2 * π * 50
+    const rotation = interpolate(progress.value, [0, 1], [0, 360]);
     return {
-      transform: [{ rotate: '-90deg' }],
-      strokeDashoffset,
+      transform: [{ rotate: `${rotation}deg` }],
     };
   });
 
@@ -64,147 +63,63 @@ const AppleProgressRing: React.FC<{ children: React.ReactNode }> = ({ children }
   });
 
   return (
-    <Animated.View style={[containerStyle, { position: 'relative' }]}>
+    <Animated.View style={containerStyle} className="relative">
       {/* Background Ring */}
-      <View className="w-32 h-32 rounded-full justify-center items-center">
-        <View className="absolute w-full h-full rounded-full border-4 border-gray-800/30" />
-        
-        {/* Progress Ring using SVG-like effect */}
+      <View className="w-[116px] h-[116px] rounded-full border-4 border-gray-800 items-center justify-center">
+        {/* Progress Ring */}
         <Animated.View
           style={[
             {
               position: 'absolute',
-              width: 128,
-              height: 128,
-              borderRadius: 64,
+              width: 108,
+              height: 108,
+              borderRadius: 54,
               borderWidth: 4,
-              borderColor: 'transparent',
               borderTopColor: '#007AFF',
-              borderRightColor: '#007AFF',
-              borderBottomColor: '#007AFF',
-              borderLeftColor: '#007AFF',
+              borderRightColor: 'transparent',
+              borderBottomColor: 'transparent',
+              borderLeftColor: 'transparent',
             },
             progressStyle
           ]}
         />
-        
-        {/* Profile Image Container with Glass Effect */}
-        <View 
-          className="w-24 h-24 rounded-full overflow-hidden"
-          style={{
-            shadowColor: '#007AFF',
-            shadowOffset: { width: 0, height: 8 },
-            shadowOpacity: 0.25,
-            shadowRadius: 16,
-            elevation: 16,
-          }}
-        >
-          {children}
-        </View>
+        {children}
       </View>
     </Animated.View>
   );
 };
 
-// Apple-style Button Component
-const AppleButton: React.FC<{
-  onPress?: () => void;
-  disabled?: boolean;
-  variant?: 'primary' | 'secondary';
-  children: React.ReactNode;
-  icon?: string;
-}> = ({ onPress, disabled = false, variant = 'primary', children, icon }) => {
-  const scale = useSharedValue(1);
-
-  const animatedStyle = useAnimatedStyle(() => {
-    return {
-      transform: [{ scale: scale.value }],
-    };
-  });
-
-  const handlePressIn = () => {
-    scale.value = withTiming(0.96, { duration: 100 });
-  };
-
-  const handlePressOut = () => {
-    scale.value = withTiming(1, { duration: 100 });
-  };
-
-  const buttonStyle = variant === 'primary' 
-    ? 'bg-blue-600' 
-    : 'bg-red-600';
-    
-  const disabledStyle = disabled 
-    ? 'bg-gray-700/60' 
-    : buttonStyle;
-
-  return (
-    <Animated.View style={animatedStyle}>
-      <TouchableOpacity
-        onPress={onPress}
-        onPressIn={handlePressIn}
-        onPressOut={handlePressOut}
-        disabled={disabled}
-        className={`${disabledStyle} rounded-2xl`}
-        style={{
-          shadowColor: variant === 'primary' ? '#007AFF' : '#FF453A',
-          shadowOffset: { width: 0, height: 8 },
-          shadowOpacity: disabled ? 0.1 : 0.3,
-          shadowRadius: 16,
-          elevation: 16,
-        }}
-      >
-        <View className="flex-row items-center justify-center py-4 px-8">
-          {icon && (
-            <Ionicons 
-              name={icon as any} 
-              size={22} 
-              color={disabled ? "#9CA3AF" : "white"} 
-            />
-          )}
-          <Text className={`font-semibold text-lg ${icon ? 'ml-3' : ''} ${
-            disabled ? 'text-gray-400' : 'text-white'
-          }`}>
-            {children}
-          </Text>
-        </View>
-      </TouchableOpacity>
-    </Animated.View>
-  );
-};
-
-// Apple-style Status Pill
-const StatusPill: React.FC<{ synced: boolean }> = ({ synced }) => {
-  return (
+// Glass morphism status pill
+const StatusPill: React.FC<{ synced: boolean }> = ({ synced }) => (
+  <View 
+    className={`flex-row items-center px-3 py-1.5 rounded-full mb-6 ${
+      synced ? 'bg-green-500/20' : 'bg-amber-500/20'
+    }`}
+    style={{
+      backgroundColor: synced ? 'rgba(16, 185, 129, 0.15)' : 'rgba(245, 158, 11, 0.15)',
+      borderWidth: 1,
+      borderColor: synced ? 'rgba(16, 185, 129, 0.3)' : 'rgba(245, 158, 11, 0.3)',
+      shadowColor: synced ? '#10B981' : '#F59E0B',
+      shadowOffset: { width: 0, height: 4 },
+      shadowOpacity: 0.2,
+      shadowRadius: 8,
+    }}
+  >
     <View 
-      className={`flex-row items-center px-4 py-2 rounded-full ${
-        synced ? 'bg-green-600/20' : 'bg-orange-600/20'
+      className={`w-2 h-2 rounded-full mr-2 ${
+        synced ? 'bg-green-400' : 'bg-amber-400'
       }`}
-      style={{
-        backgroundColor: synced ? 'rgba(52, 211, 153, 0.15)' : 'rgba(251, 146, 60, 0.15)',
-        backdropFilter: 'blur(20px)',
-      }}
+    />
+    <Text 
+      className={`text-xs font-medium ${
+        synced ? 'text-green-400' : 'text-amber-400'
+      }`}
+      style={{ letterSpacing: -0.2 }}
     >
-      <View 
-        className={`w-2 h-2 rounded-full mr-2 ${
-          synced ? 'bg-green-400' : 'bg-orange-400'
-        }`}
-      />
-      <Text className={`text-sm font-medium ${
-        synced ? 'text-green-300' : 'text-orange-300'
-      }`}>
-        {synced ? 'Gmail Synced' : 'Syncing Gmail'}
-      </Text>
-      {!synced && (
-        <ActivityIndicator 
-          size="small" 
-          color="#FB923C" 
-          style={{ marginLeft: 8 }} 
-        />
-      )}
-    </View>
-  );
-};
+      {synced ? 'Gmail Synced' : 'Gmail Pending'}
+    </Text>
+  </View>
+);
 
 export default function HomeScreen() {
   const { user, logout } = useAuth();
@@ -226,127 +141,170 @@ export default function HomeScreen() {
   return (
     <SafeAreaView className="flex-1 bg-black">
       <View className="flex-1 justify-center items-center px-8">
-        {/* Hero Section */}
-        <View className="items-center mb-12">
+        {/* Main Content - Centered like Revolut */}
+        <View className="items-center mb-16">
+          {/* App Title */}
           <Text 
-            className="text-white font-bold text-center mb-12"
+            className="text-white font-bold text-center mb-16"
             style={{ 
-              fontSize: Math.min(width * 0.08, 36),
-              letterSpacing: -0.5,
-              lineHeight: Math.min(width * 0.09, 40)
+              fontSize: 34,
+              letterSpacing: -1,
+              lineHeight: 40
             }}
           >
             Welcome to Lifafa!
           </Text>
           
-          {/* Profile Section */}
-          {user && (
-            <View className="items-center">
-              {/* Profile Picture with Apple-style Progress */}
-              {userProfile?.picture ? (
-                <View className="mb-6">
-                  {isGmailSynced ? (
-                    // Synced state with subtle glow
-                    <View 
-                      className="w-32 h-32 rounded-full justify-center items-center"
+          {/* Profile Section - Centered */}
+          {profileLoading ? (
+            <View className="items-center mb-8">
+              <View className="w-24 h-24 rounded-full bg-gray-800 items-center justify-center mb-6">
+                <ActivityIndicator size="large" color="#3B82F6" />
+              </View>
+              <Text className="text-gray-400 text-center">Loading your profile...</Text>
+            </View>
+          ) : userProfile ? (
+            <View className="items-center mb-8">
+              {!isGmailSynced ? (
+                <AppleProgressRing>
+                  {userProfile.picture ? (
+                    <Image 
+                      source={{ uri: userProfile.picture }}
+                      className="w-20 h-20 rounded-full"
                       style={{
-                        shadowColor: '#34D399',
-                        shadowOffset: { width: 0, height: 8 },
-                        shadowOpacity: 0.3,
-                        shadowRadius: 16,
-                        elevation: 16,
+                        borderWidth: 3,
+                        borderColor: '#007AFF',
                       }}
-                    >
-                      <View className="w-24 h-24 rounded-full border-4 border-green-400/50 overflow-hidden">
-                        <Image 
-                          source={{ uri: userProfile.picture }}
-                          className="w-full h-full"
-                          style={{ resizeMode: 'cover' }}
-                        />
-                      </View>
-                    </View>
+                    />
                   ) : (
-                    // Syncing state with Apple-style progress ring
-                    <AppleProgressRing>
-                      <Image 
-                        source={{ uri: userProfile.picture }}
-                        className="w-full h-full"
-                        style={{ resizeMode: 'cover' }}
-                      />
-                    </AppleProgressRing>
+                    <View className="w-20 h-20 rounded-full bg-gray-800 items-center justify-center">
+                      <Text className="text-white font-semibold text-2xl">
+                        {userProfile.name.charAt(0).toUpperCase()}
+                      </Text>
+                    </View>
                   )}
-                </View>
+                </AppleProgressRing>
               ) : (
-                // Fallback avatar
-                <View 
-                  className="w-24 h-24 rounded-full bg-gray-800 items-center justify-center mb-6"
-                  style={{
-                    shadowColor: '#000',
-                    shadowOffset: { width: 0, height: 4 },
-                    shadowOpacity: 0.3,
-                    shadowRadius: 8,
-                    elevation: 8,
-                  }}
-                >
-                  <Ionicons name="person" size={40} color="#9CA3AF" />
-                </View>
+                // Static profile picture when synced
+                userProfile.picture ? (
+                  <Image 
+                    source={{ uri: userProfile.picture }}
+                    className="w-24 h-24 rounded-full mb-6"
+                    style={{
+                      borderWidth: 3,
+                      borderColor: '#10B981',
+                    }}
+                  />
+                ) : (
+                  <View 
+                    className="w-24 h-24 rounded-full bg-gray-800 items-center justify-center mb-6"
+                    style={{
+                      borderWidth: 3,
+                      borderColor: '#10B981',
+                    }}
+                  >
+                    <Text className="text-white font-semibold text-2xl">
+                      {userProfile.name.charAt(0).toUpperCase()}
+                    </Text>
+                  </View>
+                )
               )}
               
               {/* User Info */}
               <Text 
                 className="text-white font-semibold text-center mb-2"
-                style={{ fontSize: 24, letterSpacing: -0.3 }}
+                style={{ fontSize: 24, letterSpacing: -0.5 }}
               >
-                {userProfile?.name || user.name || 'User'}
+                {userProfile.name}
               </Text>
               <Text 
-                className="text-gray-400 text-center mb-4"
+                className="text-gray-400 text-center mb-6"
                 style={{ fontSize: 16, letterSpacing: -0.2 }}
               >
-                {userProfile?.email || user.email}
+                {userProfile.email}
               </Text>
               
               {/* Status Pill */}
-              {userProfile && <StatusPill synced={isGmailSynced} />}
+              <StatusPill synced={isGmailSynced} />
+            </View>
+          ) : (
+            <View className="items-center mb-8">
+              <View className="w-24 h-24 rounded-full bg-gray-800 items-center justify-center mb-6">
+                <Ionicons name="person" size={40} color="#9CA3AF" />
+              </View>
+              <Text className="text-gray-400 text-center">Failed to load profile</Text>
             </View>
           )}
         </View>
         
-        {/* Description */}
+        {/* Description - Clean and centered */}
         <Text 
-          className="text-gray-400 text-center mb-12 leading-relaxed"
+          className="text-gray-400 text-center mb-16 leading-relaxed px-4"
           style={{ 
             fontSize: 16, 
             lineHeight: 24,
             letterSpacing: -0.2,
-            maxWidth: width * 0.8
+            maxWidth: width * 0.85
           }}
         >
-          Your intelligent email assistant powered by AI.{' '}
-          {!isGmailSynced && userProfile 
-            ? 'Please wait while we sync your Gmail data.' 
-            : 'Start chatting to organize and analyze your inbox.'
-          }
+          Your intelligent email assistant powered by AI. Start chatting to organize and analyze your inbox.
         </Text>
         
-        {/* Action Buttons */}
+        {/* Action Buttons - Positioned like Revolut */}
         <View className="w-full max-w-sm space-y-4">
-          <AppleButton
-            onPress={canStartChat ? handleStartChat : undefined}
+          {/* Primary Action Button */}
+          <TouchableOpacity
+            onPress={handleStartChat}
             disabled={!canStartChat}
-            variant="primary"
-            icon={canStartChat ? "chatbubbles" : "time"}
+            className={`w-full rounded-2xl ${
+              canStartChat ? 'bg-blue-600' : 'bg-gray-700'
+            }`}
+            style={{
+              shadowColor: canStartChat ? '#3B82F6' : '#000',
+              shadowOffset: { width: 0, height: 4 },
+              shadowOpacity: canStartChat ? 0.3 : 0.1,
+              shadowRadius: 8,
+              elevation: 8,
+            }}
           >
-            {canStartChat ? 'Start New Chat' : 'Syncing Gmail...'}
-          </AppleButton>
+            <View className="flex-row items-center justify-center py-4 px-6">
+              <Ionicons 
+                name="chatbubbles" 
+                size={20} 
+                color={canStartChat ? "white" : "#6B7280"} 
+              />
+              <Text 
+                className={`font-semibold text-lg ml-3 ${
+                  canStartChat ? 'text-white' : 'text-gray-400'
+                }`}
+                style={{ letterSpacing: -0.3 }}
+              >
+                {!isGmailSynced && userProfile ? 'Gmail Syncing...' : 'Start New Chat'}
+              </Text>
+            </View>
+          </TouchableOpacity>
           
-          <AppleButton
+          {/* Secondary Action - Logout */}
+          <TouchableOpacity
             onPress={handleLogout}
-            variant="secondary"
-            icon="log-out"
+            className="w-full bg-red-600/10 border border-red-600/20 rounded-2xl"
+            style={{
+              shadowColor: '#EF4444',
+              shadowOffset: { width: 0, height: 2 },
+              shadowOpacity: 0.1,
+              shadowRadius: 4,
+            }}
           >
-            Logout
-          </AppleButton>
+            <View className="flex-row items-center justify-center py-4 px-6">
+              <Ionicons name="log-out-outline" size={20} color="#EF4444" />
+              <Text 
+                className="text-red-400 font-semibold text-lg ml-3"
+                style={{ letterSpacing: -0.3 }}
+              >
+                Logout
+              </Text>
+            </View>
+          </TouchableOpacity>
         </View>
       </View>
     </SafeAreaView>
