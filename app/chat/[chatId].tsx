@@ -95,8 +95,21 @@ export default function ChatScreen() {
           const data = JSON.parse(event.data);
           log('Received WebSocket message:', data);
 
-          // Handle regular messages (ignore auth responses)
-          if (data.message) {
+          // Handle the new message format with reply array
+          if (data.message && data.message.reply && Array.isArray(data.message.reply)) {
+            const replyText = data.message.reply[0]; // Get the first reply from array
+            if (replyText) {
+              const newMessage: Message = {
+                id: 'ai-' + Date.now(),
+                text: replyText,
+                isUser: false,
+                timestamp: new Date(),
+              };
+              setMessages(prev => [...prev, newMessage]);
+            }
+          }
+          // Fallback for simple message format (for backward compatibility)
+          else if (data.message && typeof data.message === 'string') {
             const newMessage: Message = {
               id: 'ai-' + Date.now(),
               text: data.message,
