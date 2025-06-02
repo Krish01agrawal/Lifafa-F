@@ -66,4 +66,16 @@ export const storage = {
 export const AUTH_KEYS = {
   TOKEN: 'jwtToken',
   USER_PROFILE: 'currentUser'
-} as const; 
+} as const;
+
+// Utility function to generate unique IDs for chats and other purposes
+export const generateId = (prefix: string = 'id'): string => {
+  const timestamp = Date.now().toString(36); // Convert timestamp to base36
+  const randomPart = Math.random().toString(36).substring(2, 8); // Random 6-character string
+  return `${prefix}-${timestamp}-${randomPart}`;
+};
+
+// Specific function for generating chat IDs
+export const generateChatId = (): string => {
+  return generateId('chat');
+}; 
