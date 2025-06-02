@@ -4,6 +4,7 @@ import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import {
   Image,
   KeyboardAvoidingView,
+  Modal,
   Platform,
   ScrollView,
   Text,
@@ -24,13 +25,168 @@ import { AUTH_KEYS, storage } from '../../utils/storage';
 
 type ConnectionStatus = 'connecting' | 'connected' | 'ready' | 'disconnected' | 'error';
 
+// Add SearchModal component
+const SearchModal = React.memo(({ 
+  isVisible, 
+  onClose 
+}: { 
+  isVisible: boolean;
+  onClose: () => void;
+}) => {
+  const [searchText, setSearchText] = useState('');
+
+  // Mock chat data organized by time periods
+  const chatSections = [
+    {
+      title: "Yesterday",
+      chats: [
+        { id: 1, title: "Email Marketing Strategy", icon: "mail-outline" },
+        { id: 2, title: "AI Assistant Integration", icon: "chatbubble-outline" },
+        { id: 3, title: "Database Optimization", icon: "server-outline" }
+      ]
+    },
+    {
+      title: "Previous 7 Days", 
+      chats: [
+        { id: 4, title: "React Native Performance", icon: "phone-portrait-outline" },
+        { id: 5, title: "Authentication Setup", icon: "key-outline" },
+        { id: 6, title: "Email Templates Design", icon: "design-outline" },
+        { id: 7, title: "API Rate Limiting", icon: "speedometer-outline" }
+      ]
+    }
+  ];
+
+  return (
+    <Modal
+      visible={isVisible}
+      animationType="fade"
+      transparent={true}
+      onRequestClose={onClose}
+    >
+      <TouchableOpacity 
+        className="flex-1 bg-black/50" 
+        activeOpacity={1}
+        onPress={onClose}
+        style={{ justifyContent: 'flex-start', alignItems: 'center', paddingTop: 60 }}
+      >
+        <TouchableOpacity activeOpacity={1} onPress={() => {}}>
+          <View 
+            className="bg-gray-900 rounded-xl border border-gray-700 overflow-hidden"
+            style={{ 
+              position: 'relative',
+              width: 650,
+              maxHeight: 500
+            }}
+          >
+            {/* Close Button */}
+            <TouchableOpacity
+              onPress={onClose}
+              className="absolute top-3 right-3 w-8 h-8 bg-gray-600 rounded-full items-center justify-center"
+              style={{ zIndex: 999 }}
+            >
+              <Ionicons name="close" size={18} color="white" />
+            </TouchableOpacity>
+
+            {/* Search Bar */}
+            <View className="px-4 py-3 border-b border-gray-800" style={{ paddingRight: 56 }}>
+              <View className="bg-gray-800 rounded-lg px-3 py-2 flex-row items-center">
+                <Ionicons name="search" size={16} color="#9CA3AF" />
+                <TextInput
+                  className="flex-1 text-white text-sm ml-2"
+                  placeholder="Search chats..."
+                  placeholderTextColor="#6B7280"
+                  value={searchText}
+                  onChangeText={setSearchText}
+                  autoFocus
+                  style={{ 
+                    fontSize: 14,
+                    borderWidth: 0,
+                    outline: 'none',
+                  }}
+                />
+                {searchText.length > 0 && (
+                  <TouchableOpacity
+                    onPress={() => setSearchText('')}
+                    className="ml-2"
+                  >
+                    <Ionicons name="close" size={16} color="#6B7280" />
+                  </TouchableOpacity>
+                )}
+              </View>
+            </View>
+
+            {/* New Chat Option */}
+            <TouchableOpacity className="px-4 py-3 border-b border-gray-800 flex-row items-center">
+              <View className="w-8 h-8 bg-gray-700 rounded-lg items-center justify-center mr-3">
+                <Ionicons name="create-outline" size={16} color="#9CA3AF" />
+              </View>
+              <Text className="text-white text-sm font-medium">New chat</Text>
+            </TouchableOpacity>
+
+            {/* Under Development Notice */}
+            <View className="px-4 py-3 bg-yellow-600/10 border-b border-gray-800">
+              <View className="flex-row items-center">
+                <Text className="text-lg mr-2">🚧</Text>
+                <Text className="text-yellow-200 text-xs font-medium">
+                  Chat history feature under development
+                </Text>
+              </View>
+            </View>
+
+            {/* Chat History Sections */}
+            <ScrollView style={{ maxHeight: 300 }} showsVerticalScrollIndicator={false}>
+              {chatSections.map((section, sectionIndex) => (
+                <View key={sectionIndex}>
+                  {/* Section Header */}
+                  <View className="px-4 py-2 bg-gray-800/50">
+                    <Text className="text-gray-400 text-xs font-medium uppercase tracking-wide">
+                      {section.title}
+                    </Text>
+                  </View>
+                  
+                  {/* Section Chats */}
+                  {section.chats.map((chat, chatIndex) => (
+                    <TouchableOpacity 
+                      key={chat.id}
+                      className="px-4 py-3 flex-row items-center border-b border-gray-800/50 last:border-b-0"
+                    >
+                      <View className="w-8 h-8 bg-gray-700 rounded-lg items-center justify-center mr-3">
+                        <Ionicons name={chat.icon as any} size={16} color="#9CA3AF" />
+                      </View>
+                      <Text className="text-gray-300 text-sm flex-1" numberOfLines={1}>
+                        {chat.title}
+                      </Text>
+                    </TouchableOpacity>
+                  ))}
+                </View>
+              ))}
+              
+              {/* Coming Soon Footer */}
+              <View className="px-4 py-4 bg-gray-800/30">
+                <View className="flex-row items-center justify-center">
+                  <Text className="text-sm mr-2">⏳</Text>
+                  <Text className="text-gray-400 text-xs">
+                    More features coming soon!
+                  </Text>
+                </View>
+              </View>
+            </ScrollView>
+          </View>
+        </TouchableOpacity>
+      </TouchableOpacity>
+    </Modal>
+  );
+});
+
 // Move Sidebar component outside and memoize it
 const SidebarComponent = React.memo(({ 
   animatedSidebarStyle, 
-  userProfile 
+  userProfile,
+  onSearchPress
 }: { 
   animatedSidebarStyle: any;
   userProfile: any;
+  onSearchPress: () => void;
 }) => (
   <Animated.View 
     style={animatedSidebarStyle}
@@ -112,11 +268,14 @@ const SidebarComponent = React.memo(({
         </TouchableOpacity>
       </View>
       
-      {/* Search Bar */}
-      <View className="bg-gray-800 rounded-xl px-3 py-2 flex-row items-center">
+      {/* Search Bar - Now Tappable */}
+      <TouchableOpacity 
+        onPress={onSearchPress}
+        className="bg-gray-800 rounded-xl px-3 py-2 flex-row items-center"
+      >
         <Ionicons name="search" size={16} color="#9CA3AF" />
         <Text className="text-gray-400 text-sm ml-2 flex-1">Search chats...</Text>
-      </View>
+      </TouchableOpacity>
     </View>
     
     {/* Chat History */}
@@ -296,6 +455,7 @@ export default function ChatScreen() {
   const [connectionStatus, setConnectionStatus] = useState<ConnectionStatus>('disconnected');
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
   const [isWaitingForResponse, setIsWaitingForResponse] = useState(false);
+  const [isSearchModalVisible, setIsSearchModalVisible] = useState(false);
   const scrollViewRef = useRef<ScrollView>(null);
   const wsRef = useRef<WebSocket | null>(null);
   
@@ -519,13 +679,23 @@ export default function ChatScreen() {
     };
   });
 
+  // Add search modal handlers
+  const openSearchModal = useCallback(() => {
+    setIsSearchModalVisible(true);
+  }, []);
+
+  const closeSearchModal = useCallback(() => {
+    setIsSearchModalVisible(false);
+  }, []);
+
   // Memoize sidebar component to prevent rerenders
   const MemoizedSidebar = useMemo(() => (
     <SidebarComponent 
       animatedSidebarStyle={animatedSidebarStyle}
       userProfile={userProfile}
+      onSearchPress={openSearchModal}
     />
-  ), [animatedSidebarStyle, userProfile]);
+  ), [animatedSidebarStyle, userProfile, openSearchModal]);
 
   return (
     <SafeAreaView className="flex-1 bg-black">
@@ -653,6 +823,12 @@ export default function ChatScreen() {
           </KeyboardAvoidingView>
         </View>
       </View>
+
+      {/* Search Modal */}
+      <SearchModal 
+        isVisible={isSearchModalVisible}
+        onClose={closeSearchModal}
+      />
     </SafeAreaView>
   );
 } 
