@@ -1,4 +1,5 @@
 import { Ionicons } from '@expo/vector-icons';
+import { LinearGradient } from 'expo-linear-gradient';
 import React from 'react';
 import { Dimensions, Text, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -21,80 +22,86 @@ export default function LandingPage() {
   };
 
   return (
-    <SafeAreaView className="flex-1 bg-black">
-      <View className="flex-1 justify-center items-center px-8">
-        {/* Hero Section */}
-        <View className="items-center mb-12">
-          {/* App Icon/Logo */}
-          <View 
-            className="w-24 h-24 rounded-3xl mb-8 justify-center items-center bg-blue-600"
-            style={{
-              shadowColor: '#000',
-              shadowOffset: { width: 0, height: 8 },
-              shadowOpacity: 0.3,
-              shadowRadius: 16,
-              elevation: 16,
-            }}
-          >
-            <Ionicons name="chatbubbles" size={48} color="white" />
-          </View>
+    <SafeAreaView className="flex-1">
+      <LinearGradient
+        colors={['#0F172A', '#1E293B', '#000000']}
+        locations={[0, 0.5, 1]}
+        style={{ flex: 1 }}
+      >
+        <View className="flex-1 justify-center items-center px-8">
+          {/* Hero Section */}
+          <View className="items-center mb-12">
+            {/* App Icon/Logo */}
+            <View 
+              className="w-24 h-24 rounded-3xl mb-8 justify-center items-center bg-blue-600"
+              style={{
+                shadowColor: '#000',
+                shadowOffset: { width: 0, height: 8 },
+                shadowOpacity: 0.3,
+                shadowRadius: 16,
+                elevation: 16,
+              }}
+            >
+              <Ionicons name="chatbubbles" size={48} color="white" />
+            </View>
 
-          {/* App Title */}
-          <Text className="text-4xl font-bold text-center mb-4 text-white">
-            Lifafa
-          </Text>
+            {/* App Title */}
+            <Text className="text-4xl font-bold text-center mb-4 text-white">
+              Lifafa
+            </Text>
 
-          {/* Subtitle */}
-          <Text className="text-gray-400 text-lg text-center leading-relaxed max-w-sm">
-            Your intelligent email assistant powered by AI. Organize, analyze, and chat with your inbox.
-          </Text>
-        </View>
-
-        {/* Features */}
-        <View className="w-full max-w-sm mb-12">
-          <FeatureItem 
-            icon="mail-outline" 
-            title="Smart Email Management" 
-            description="AI-powered inbox organization"
-          />
-          <FeatureItem 
-            icon="chatbubble-ellipses-outline" 
-            title="Intelligent Chat" 
-            description="Ask questions about your emails"
-          />
-          <FeatureItem 
-            icon="shield-checkmark-outline" 
-            title="Secure & Private" 
-            description="Your data stays protected"
-          />
-        </View>
-
-        {/* Google Login Button */}
-        <TouchableOpacity
-          onPress={handleGoogleLogin}
-          disabled={isLoading}
-          className={`w-full max-w-sm bg-blue-600 rounded-2xl ${isLoading ? 'opacity-70' : ''}`}
-          style={{
-            shadowColor: '#000',
-            shadowOffset: { width: 0, height: 4 },
-            shadowOpacity: 0.3,
-            shadowRadius: 8,
-            elevation: 8,
-          }}
-        >
-          <View className="flex-row items-center justify-center py-4 px-6">
-            <Ionicons name="logo-google" size={24} color="white" />
-            <Text className="text-white font-semibold text-lg ml-3">
-              {isLoading ? 'Connecting...' : 'Continue with Google'}
+            {/* Subtitle */}
+            <Text className="text-gray-400 text-lg text-center leading-relaxed max-w-sm">
+              Your intelligent email assistant powered by AI. Organize, analyze, and chat with your inbox.
             </Text>
           </View>
-        </TouchableOpacity>
 
-        {/* Footer */}
-        <Text className="text-gray-500 text-sm text-center mt-8 max-w-xs leading-relaxed">
-          By continuing, you agree to our Terms of Service and Privacy Policy
-        </Text>
-      </View>
+          {/* Features */}
+          <View className="w-full max-w-sm mb-12">
+            <FeatureItem 
+              icon="mail-outline" 
+              title="Smart Email Management" 
+              description="AI-powered inbox organization"
+            />
+            <FeatureItem 
+              icon="chatbubble-ellipses-outline" 
+              title="Intelligent Chat" 
+              description="Ask questions about your emails"
+            />
+            <FeatureItem 
+              icon="shield-checkmark-outline" 
+              title="Secure & Private" 
+              description="Your data stays protected"
+            />
+          </View>
+
+          {/* Google Login Button */}
+          <TouchableOpacity
+            onPress={handleGoogleLogin}
+            disabled={isLoading}
+            className={`w-full max-w-sm bg-blue-600 rounded-2xl ${isLoading ? 'opacity-70' : ''}`}
+            style={{
+              shadowColor: '#000',
+              shadowOffset: { width: 0, height: 4 },
+              shadowOpacity: 0.3,
+              shadowRadius: 8,
+              elevation: 8,
+            }}
+          >
+            <View className="flex-row items-center justify-center py-4 px-6">
+              <Ionicons name="logo-google" size={24} color="white" />
+              <Text className="text-white font-semibold text-lg ml-3">
+                {isLoading ? 'Connecting...' : 'Continue with Google'}
+              </Text>
+            </View>
+          </TouchableOpacity>
+
+          {/* Footer */}
+          <Text className="text-gray-500 text-sm text-center mt-8 max-w-xs leading-relaxed">
+            By continuing, you agree to our Terms of Service and Privacy Policy
+          </Text>
+        </View>
+      </LinearGradient>
     </SafeAreaView>
   );
 }
