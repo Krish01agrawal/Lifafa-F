@@ -583,12 +583,14 @@ export default function ChatScreen() {
             : 'bg-gray-900 rounded-bl-md max-w-[70%]'
         }`}
       >
-        <Text className="text-white text-base leading-5">
+        <Text className={`text-base leading-5 ${message.isUser ? 'text-white' : 'text-gray-300'}`}>
           {message.text}
         </Text>
-        <Text className={`text-xs mt-2 ${message.isUser ? 'text-blue-200' : 'text-gray-400'}`}>
-          {formatTime(message.timestamp)}
-        </Text>
+        {!message.isUser && (
+          <Text className="text-gray-400 text-xs mt-2">
+            {formatTime(message.timestamp)}
+          </Text>
+        )}
       </View>
     </View>
   )), [formatTime]);
