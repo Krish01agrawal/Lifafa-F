@@ -242,16 +242,23 @@ export default function ChatScreen() {
   const MessageBubble = ({ message }: { message: Message }) => (
     <View className={`mb-3 ${message.isUser ? 'items-end' : 'items-start'}`}>
       <View
-        className={`max-w-[75%] px-4 py-3 rounded-2xl ${
+        className={`px-4 py-3 ${
           message.isUser
-            ? 'bg-blue-600 rounded-br-md'
-            : 'bg-gray-700 rounded-bl-md'
+            ? 'bg-blue-600'
+            : 'bg-gray-700'
         }`}
+        style={{ 
+          maxWidth: '75%',
+          borderRadius: 18,
+          borderBottomRightRadius: message.isUser ? 3 : 18,
+          borderBottomLeftRadius: message.isUser ? 18 : 3,
+        }}
       >
         <Text className="text-white text-base leading-5">
           {message.text}
         </Text>
       </View>
+      
       <Text className="text-gray-500 text-xs mt-1 px-2">
         {formatTime(message.timestamp)}
       </Text>
