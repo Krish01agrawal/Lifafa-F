@@ -376,7 +376,13 @@ export default function ChatScreen() {
 
         {/* Previous Chats */}
         <View className="px-3">
-          {[...Array(5)].map((_, index) => (
+          {[
+            { titleClass: 'w-3/4', line1Class: 'w-11/12', line2Class: 'w-2/3', timeClass: 'w-1/3', unread: false },
+            { titleClass: 'w-4/5', line1Class: 'w-5/6', line2Class: 'w-3/5', timeClass: 'w-2/5', unread: true },
+            { titleClass: 'w-2/3', line1Class: 'w-11/12', line2Class: 'w-1/2', timeClass: 'w-1/3', unread: false },
+            { titleClass: 'w-3/4', line1Class: 'w-5/6', line2Class: 'w-3/5', timeClass: 'w-2/5', unread: false },
+            { titleClass: 'w-2/3', line1Class: 'w-5/6', line2Class: 'w-2/3', timeClass: 'w-1/3', unread: false }
+          ].map((item, index) => (
             <TouchableOpacity 
               key={index}
               className="bg-gray-800/50 rounded-xl p-3 mb-2 border border-gray-700/50"
@@ -391,21 +397,21 @@ export default function ChatScreen() {
                 <View className="flex-1 pr-3">
                   <View className="flex-row items-center mb-2">
                     {/* Title Skeleton */}
-                    <View className="bg-gray-600 rounded h-3 flex-1 mr-2" style={{ width: `${60 + Math.random() * 30}%` }} />
-                    {/* Unread indicator for some items */}
-                    {index === 1 && (
+                    <View className={`bg-gray-600 rounded h-3 mr-2 ${item.titleClass}`} />
+                    {/* Unread indicator */}
+                    {item.unread && (
                       <View className="w-2 h-2 bg-blue-500 rounded-full" />
                     )}
                   </View>
                   
                   {/* Message Preview Skeleton */}
                   <View className="mb-2">
-                    <View className="bg-gray-700 rounded h-2.5 mb-1" style={{ width: `${80 + Math.random() * 15}%` }} />
-                    <View className="bg-gray-700 rounded h-2.5" style={{ width: `${50 + Math.random() * 30}%` }} />
+                    <View className={`bg-gray-700 rounded h-2.5 mb-1 ${item.line1Class}`} />
+                    <View className={`bg-gray-700 rounded h-2.5 ${item.line2Class}`} />
                   </View>
                   
                   {/* Timestamp Skeleton */}
-                  <View className="bg-gray-700 rounded h-2" style={{ width: `${30 + Math.random() * 20}%` }} />
+                  <View className={`bg-gray-700 rounded h-2 ${item.timeClass}`} />
                 </View>
                 
                 {/* Delete Button */}
@@ -527,7 +533,19 @@ export default function ChatScreen() {
                   multiline
                   textAlignVertical="top"
                   editable={connectionStatus === 'ready'}
-                  style={{ fontSize: 16 }}
+                  style={{ 
+                    fontSize: 16,
+                    borderWidth: 0,
+                    outline: 'none',
+                  }}
+                  onKeyPress={(e) => {
+                    if (e.nativeEvent.key === 'Enter') {
+                      // For now, just send on Enter press
+                      // In React Native, detecting Shift+Enter is complex, so we'll use Enter to send
+                      e.preventDefault();
+                      sendMessage();
+                    }
+                  }}
                 />
                 
                 {inputText.trim() && connectionStatus === 'ready' ? (
