@@ -1,6 +1,6 @@
 import { Ionicons } from '@expo/vector-icons';
 import { router, useLocalSearchParams } from 'expo-router';
-import React, { useRef, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import {
     KeyboardAvoidingView,
     Platform,
@@ -11,6 +11,8 @@ import {
     View
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { Config, log, logError } from '../../constants/Config';
+import { AUTH_KEYS, storage } from '../../utils/storage';
 
 interface Message {
   id: string;
@@ -19,46 +21,153 @@ interface Message {
   timestamp: Date;
 }
 
+type ConnectionStatus = 'connecting' | 'connected' | 'ready' | 'disconnected' | 'error';
+
 export default function ChatScreen() {
   const { chatId } = useLocalSearchParams<{ chatId: string }>();
-  const [messages, setMessages] = useState<Message[]>([
-    {
-      id: '1',
-      text: 'Hello! I\'m your AI assistant. How can I help you with your emails today?',
-      isUser: false,
-      timestamp: new Date(),
-    }
-  ]);
+  const [messages, setMessages] = useState<Message[]>([]);
   const [inputText, setInputText] = useState('');
+  const [connectionStatus, setConnectionStatus] = useState<ConnectionStatus>('disconnected');
   const scrollViewRef = useRef<ScrollView>(null);
+  const wsRef = useRef<WebSocket | null>(null);
+
+  // Create WebSocket URL from API URL
+  const getWebSocketUrl = (chatId: string) => {
+    const apiUrl = Config.apiUrl;
+    // Convert http://localhost:3001/api to ws://localhost:3001
+    const wsUrl = apiUrl
+      .replace('http://', 'ws://')
+      .replace('https://', 'wss://')
+      .replace('/api', ''); // Remove /api suffix
+    
+    return `${wsUrl}/ws/chat/${chatId}`;
+  };
+
+  const connectWebSocket = async () => {
+    if (!chatId) {
+      logError('No chatId provided for WebSocket connection');
+      return;
+    }
+
+    try {
+      setConnectionStatus('connecting');
+      const wsUrl = getWebSocketUrl(chatId as string);
+      log('Connecting to WebSocket:', wsUrl);
+
+      const ws = new WebSocket(wsUrl);
+      wsRef.current = ws;
+
+      ws.onopen = async () => {
+        log('WebSocket connected, authenticating...');
+        setConnectionStatus('connected');
+        
+        // Get JWT token from storage and authenticate
+        try {
+          const jwtToken = await storage.getItem(AUTH_KEYS.TOKEN);
+          if (jwtToken) {
+            log('Sending authentication...');
+            ws.send(JSON.stringify({ jwt_token: jwtToken }));
+            
+            // Set status to ready immediately after sending auth
+            setConnectionStatus('ready');
+            
+            // Add welcome message
+            const welcomeMessage: Message = {
+              id: 'welcome-' + Date.now(),
+              text: 'Hello! I\'m your AI assistant. How can I help you with your emails today?',
+              isUser: false,
+              timestamp: new Date(),
+            };
+            setMessages([welcomeMessage]);
+            
+          } else {
+            logError('No JWT token found for authentication');
+            setConnectionStatus('error');
+          }
+        } catch (error) {
+          logError('Error getting JWT token:', error);
+          setConnectionStatus('error');
+        }
+      };
+
+      ws.onmessage = (event) => {
+        try {
+          const data = JSON.parse(event.data);
+          log('Received WebSocket message:', data);
+
+          // Handle regular messages (ignore auth responses)
+          if (data.message) {
+            const newMessage: Message = {
+              id: 'ai-' + Date.now(),
+              text: data.message,
+              isUser: false,
+              timestamp: new Date(),
+            };
+            setMessages(prev => [...prev, newMessage]);
+          }
+        } catch (error) {
+          logError('Error parsing WebSocket message:', error);
+        }
+      };
+
+      ws.onerror = (error) => {
+        logError('WebSocket error:', error);
+        setConnectionStatus('error');
+      };
+
+      ws.onclose = (event) => {
+        log('WebSocket closed:', event.code, event.reason);
+        setConnectionStatus('disconnected');
+      };
+
+    } catch (error) {
+      logError('Error connecting to WebSocket:', error);
+      setConnectionStatus('error');
+    }
+  };
+
+  useEffect(() => {
+    connectWebSocket();
+
+    // Cleanup on unmount
+    return () => {
+      if (wsRef.current) {
+        log('Closing WebSocket connection');
+        wsRef.current.close();
+      }
+    };
+  }, [chatId]);
 
   const handleGoBack = () => {
+    // Close WebSocket before navigating back
+    if (wsRef.current) {
+      wsRef.current.close();
+    }
     router.back();
   };
 
   const sendMessage = () => {
-    if (inputText.trim() === '') return;
+    if (inputText.trim() === '' || connectionStatus !== 'ready') return;
 
-    const newMessage: Message = {
-      id: Date.now().toString(),
-      text: inputText.trim(),
+    const messageText = inputText.trim();
+    
+    // Add user message to UI immediately
+    const userMessage: Message = {
+      id: 'user-' + Date.now(),
+      text: messageText,
       isUser: true,
       timestamp: new Date(),
     };
-
-    setMessages(prev => [...prev, newMessage]);
+    setMessages(prev => [...prev, userMessage]);
     setInputText('');
 
-    // Simulate AI response after a delay
-    setTimeout(() => {
-      const aiResponse: Message = {
-        id: (Date.now() + 1).toString(),
-        text: 'Thanks for your message! I\'m here to help you with your emails and documents. What would you like to know?',
-        isUser: false,
-        timestamp: new Date(),
-      };
-      setMessages(prev => [...prev, aiResponse]);
-    }, 1000);
+    // Send message through WebSocket
+    if (wsRef.current && wsRef.current.readyState === WebSocket.OPEN) {
+      log('Sending message via WebSocket:', messageText);
+      wsRef.current.send(JSON.stringify({ message: messageText }));
+    } else {
+      logError('WebSocket not connected, cannot send message');
+    }
 
     // Scroll to bottom
     setTimeout(() => {
@@ -68,6 +177,28 @@ export default function ChatScreen() {
 
   const formatTime = (date: Date) => {
     return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+  };
+
+  const getConnectionStatusText = () => {
+    switch (connectionStatus) {
+      case 'connecting': return 'Connecting...';
+      case 'connected': return 'Authenticating...';
+      case 'ready': return 'Ready';
+      case 'disconnected': return 'Disconnected';
+      case 'error': return 'Connection Error';
+      default: return 'Unknown';
+    }
+  };
+
+  const getConnectionStatusColor = () => {
+    switch (connectionStatus) {
+      case 'ready': return '#10B981'; // green
+      case 'connecting':
+      case 'connected': return '#F59E0B'; // yellow
+      case 'disconnected':
+      case 'error': return '#EF4444'; // red
+      default: return '#6B7280'; // gray
+    }
   };
 
   const MessageBubble = ({ message }: { message: Message }) => (
@@ -104,13 +235,26 @@ export default function ChatScreen() {
           <Text className="text-white text-lg font-semibold">
             AI Assistant
           </Text>
-          <Text className="text-gray-400 text-sm">
-            Chat ID: {chatId?.slice(-8)}
-          </Text>
+          <View className="flex-row items-center">
+            <View 
+              className="w-2 h-2 rounded-full mr-2"
+              style={{ backgroundColor: getConnectionStatusColor() }}
+            />
+            <Text className="text-gray-400 text-sm">
+              {getConnectionStatusText()}
+            </Text>
+          </View>
         </View>
         
-        <TouchableOpacity className="p-2">
-          <Ionicons name="information-circle-outline" size={24} color="#3B82F6" />
+        <TouchableOpacity 
+          onPress={connectWebSocket}
+          className="p-2"
+        >
+          <Ionicons 
+            name="refresh" 
+            size={24} 
+            color={connectionStatus === 'ready' ? '#10B981' : '#3B82F6'} 
+          />
         </TouchableOpacity>
       </View>
 
@@ -142,16 +286,17 @@ export default function ChatScreen() {
             
             <TextInput
               className="flex-1 text-white text-base py-2 max-h-24"
-              placeholder="Message"
+              placeholder={connectionStatus === 'ready' ? 'Message' : 'Connecting...'}
               placeholderTextColor="#6B7280"
               value={inputText}
               onChangeText={setInputText}
               multiline
               textAlignVertical="top"
+              editable={connectionStatus === 'ready'}
               style={{ fontSize: 16 }}
             />
             
-            {inputText.trim() ? (
+            {inputText.trim() && connectionStatus === 'ready' ? (
               <TouchableOpacity
                 onPress={sendMessage}
                 className="ml-3 mb-1"
@@ -162,7 +307,11 @@ export default function ChatScreen() {
               </TouchableOpacity>
             ) : (
               <TouchableOpacity className="ml-3 mb-1">
-                <Ionicons name="mic" size={28} color="#3B82F6" />
+                <Ionicons 
+                  name="mic" 
+                  size={28} 
+                  color={connectionStatus === 'ready' ? '#3B82F6' : '#6B7280'} 
+                />
               </TouchableOpacity>
             )}
           </View>
