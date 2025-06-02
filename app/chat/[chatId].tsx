@@ -577,10 +577,10 @@ export default function ChatScreen() {
   const MessageBubble = useMemo(() => React.memo(({ message }: { message: Message }) => (
     <View className={`mb-4 ${message.isUser ? 'items-end' : 'items-start'}`}>
       <View 
-        className={`max-w-[80%] px-4 py-3 rounded-2xl ${
+        className={`px-4 py-3 rounded-2xl ${
           message.isUser
-            ? 'bg-blue-600 rounded-br-md'
-            : 'bg-gray-800 rounded-bl-md border border-gray-700'
+            ? 'bg-blue-600 rounded-br-md max-w-[80%]'
+            : 'bg-gray-900 rounded-bl-md max-w-[70%]'
         }`}
       >
         <Text className="text-white text-base leading-5">
