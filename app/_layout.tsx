@@ -8,6 +8,7 @@ import React, { useEffect } from 'react';
 import { ActivityIndicator, View } from 'react-native';
 import 'react-native-reanimated';
 import { ToastProvider, useToast } from '../components/ui/ToastContainer';
+import { UserProfileProvider } from '../components/UserProfileProvider';
 import { AuthProvider, useAuth } from '../contexts/AuthContext';
 import '../global.css';
 
@@ -81,7 +82,11 @@ function AuthGuard({ children }: { children: React.ReactNode }) {
     return null;
   }
 
-  return <>{children}</>;
+  return (
+    <UserProfileProvider>
+      {children}
+    </UserProfileProvider>
+  );
 }
 
 export default function RootLayout() {

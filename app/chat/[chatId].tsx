@@ -2,6 +2,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useLocalSearchParams } from 'expo-router';
 import React, { useEffect, useRef, useState } from 'react';
 import {
+  Image,
   KeyboardAvoidingView,
   Platform,
   ScrollView,
@@ -17,6 +18,7 @@ import Animated, {
 } from 'react-native-reanimated';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Config, log, logError } from '../../constants/Config';
+import { useUserProfile } from '../../hooks/useUserProfile';
 import { AUTH_KEYS, storage } from '../../utils/storage';
 
 interface Message {
@@ -37,6 +39,9 @@ export default function ChatScreen() {
   const [isWaitingForResponse, setIsWaitingForResponse] = useState(false);
   const scrollViewRef = useRef<ScrollView>(null);
   const wsRef = useRef<WebSocket | null>(null);
+  
+  // Get user profile from TanStack Query cache
+  const { data: userProfile } = useUserProfile();
   
   // Animation values
   const sidebarWidth = useSharedValue(320); // 80 * 4 = 320px (w-80)
@@ -336,6 +341,71 @@ export default function ChatScreen() {
     >
       {/* Sidebar Header */}
       <View className="px-4 py-4 border-b border-gray-800">
+        {/* User Profile Section */}
+        {userProfile && (
+          <View className="mb-4 pb-4 border-b border-gray-700">
+            <View className="flex-row items-center mb-3">
+              {/* Profile Picture */}
+              {userProfile.picture ? (
+                <Image 
+                  source={{ uri: userProfile.picture }}
+                  className="w-12 h-12 rounded-full mr-3"
+                  style={{
+                    borderWidth: 2,
+                    borderColor: '#3B82F6',
+                  }}
+                />
+              ) : (
+                <View className="w-12 h-12 bg-blue-600 rounded-full items-center justify-center mr-3">
+                  <Text className="text-white font-semibold text-lg">
+                    {userProfile.name.charAt(0).toUpperCase()}
+                  </Text>
+                </View>
+              )}
+              
+              <View className="flex-1">
+                <Text className="text-white font-semibold text-sm" numberOfLines={1}>
+                  {userProfile.name}
+                </Text>
+                <Text className="text-gray-400 text-xs" numberOfLines={1}>
+                  {userProfile.email}
+                </Text>
+              </View>
+            </View>
+            
+            {/* Gmail Sync Status */}
+            <View className="flex-row items-center justify-between mb-2">
+              <View className="flex-row items-center">
+                <Ionicons 
+                  name={userProfile.initial_gmailData_sync ? "checkmark-circle" : "time-outline"} 
+                  size={14} 
+                  color={userProfile.initial_gmailData_sync ? "#10B981" : "#F59E0B"} 
+                />
+                <Text className="text-gray-400 text-xs ml-2">
+                  Gmail {userProfile.initial_gmailData_sync ? 'Synced' : 'Pending'}
+                </Text>
+              </View>
+              
+              {/* Access Token Status */}
+              <View className="flex-row items-center">
+                <Ionicons 
+                  name="key-outline" 
+                  size={12} 
+                  color="#3B82F6" 
+                />
+                <Text className="text-blue-400 text-xs ml-1">
+                  Connected
+                </Text>
+              </View>
+            </View>
+            
+            {/* Token Expiry */}
+            <Text className="text-gray-500 text-xs">
+              Token expires: {new Date(userProfile.token_expiry).toLocaleDateString()}
+            </Text>
+          </View>
+        )}
+        
         <View className="flex-row items-center justify-between mb-3">
           <Text className="text-white text-xl font-bold">
             Chats
