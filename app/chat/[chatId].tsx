@@ -489,7 +489,6 @@ export default function ChatScreen() {
   // Create WebSocket URL from API URL
   const getWebSocketUrl = useCallback((chatId: string) => {
     const apiUrl = Config.apiUrl;
-    // Convert http://localhost:3001/api to ws://localhost:3001
     const wsUrl = apiUrl
       .replace('http://', 'ws://')
       .replace('https://', 'wss://')

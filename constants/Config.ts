@@ -13,7 +13,7 @@ const extra = Constants.expoConfig?.extra || {};
 // Core configuration
 export const Config: ConfigType = {
   env: extra.env || 'development',
-  apiUrl: extra.apiUrl || 'http://localhost:3001/api',
+  apiUrl: extra.apiUrl,
   enableLogging: extra.enableLogging !== undefined ? extra.enableLogging : true,
   enableDetailedLogging: extra.enableDetailedLogging !== undefined ? extra.enableDetailedLogging : false,
   enableMockApi: extra.enableMockApi !== undefined ? extra.enableMockApi : false,
@@ -59,6 +59,7 @@ export const getApiUrl = (endpoint: string = '') => {
   const baseUrl = Config.apiUrl.endsWith('/') 
     ? Config.apiUrl.slice(0, -1) 
     : Config.apiUrl;
+  console.log('baseUrl', baseUrl);
   const cleanEndpoint = endpoint.startsWith('/') ? endpoint : `/${endpoint}`;
   return `${baseUrl}${cleanEndpoint}`;
 };

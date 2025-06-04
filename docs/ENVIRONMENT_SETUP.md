@@ -26,7 +26,7 @@ EXPO_PUBLIC_ENABLE_MOCK_API=true
 | Variable | Default | Description |
 |----------|---------|-------------|
 | `NODE_ENV` | `development` | Environment mode |
-| `EXPO_PUBLIC_API_URL` | `http://localhost:3001/api` | Backend API URL (not used in local mode) |
+| `EXPO_PUBLIC_API_URL` | `http://localhost:8001` | Backend API URL (not used in local mode) |
 | `EXPO_PUBLIC_ENABLE_LOGGING` | `true` | Enable console logging |
 | `EXPO_PUBLIC_ENABLE_DETAILED_LOGGING` | `false` | Enable detailed debug logging |
 | `EXPO_PUBLIC_ENABLE_MOCK_API` | `true` | Enable mock API responses |

@@ -1,5 +1,5 @@
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { log, logError } from '../constants/Config';
+import { getApiUrl, log, logError } from '../constants/Config';
 import { useAuth } from '../contexts/AuthContext';
 
 // Extended user profile interface to match the API response
@@ -19,14 +19,6 @@ export interface FullUserProfile {
 export const userKeys = {
   all: ['user'] as const,
   profile: () => [...userKeys.all, 'profile'] as const,
-};
-
-// Get the correct API URL for the /me endpoint
-const getApiUrl = (endpoint: string = '') => {
-  // Use port 8001 as shown in the curl example
-  const baseUrl = 'http://localhost:8001';
-  const cleanEndpoint = endpoint.startsWith('/') ? endpoint : `/${endpoint}`;
-  return `${baseUrl}${cleanEndpoint}`;
 };
 
 // Fetch user profile from /me endpoint
