@@ -492,7 +492,6 @@ export default function ChatScreen() {
     const wsUrl = apiUrl
       .replace('http://', 'ws://')
       .replace('https://', 'wss://')
-      .replace('/api', ''); // Remove /api suffix
     
     return `${wsUrl}/ws/chat/${chatId}`;
   }, []);
